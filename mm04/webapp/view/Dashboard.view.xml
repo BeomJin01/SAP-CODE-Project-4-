@@ -1,0 +1,13 @@
+<mvc:View
+    controllerName="code.t4.ui5.mm04.controller.Dashboard"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    displayBlock="true">
+    <Page
+        id="dashboardPage"
+        title="MPS 생산계획 전체 현황 대시보드"
+        showNavButton="true"
+        navButtonPress=".onNavBack">
+        <content/>
+    </Page>
+</mvc:View>

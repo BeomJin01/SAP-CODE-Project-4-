@@ -1,0 +1,24 @@
+{
+  "generationParameters": {
+    "generationDate": "Thu May 21 2026 11:09:28 GMT+0900 (Korean Standard Time)",
+    "generatorPlatform": "Visual Studio Code",
+    "serviceType": "SAP System (ABAP On-Premise)",
+    "metadataFilename": "",
+    "serviceUrl": "http://bgissap3.bgissap.co.kr:8000/sap/opu/odata/sap/ZGWD4MM0003_SRV",
+    "appName": "mm04",
+    "appTitle": "[MM] MPS 생산계획 결과 조회",
+    "appDescription": "[MM] MPS 생산계획 결과 조회 Fiori 프로그램",
+    "appNamespace": "code.t4.ui5",
+    "ui5Theme": "sap_horizon",
+    "ui5Version": "1.120.23",
+    "enableCodeAssist": false,
+    "enableEslint": false,
+    "enableTypeScript": false,
+    "showMockDataInfo": true,
+    "generatorVersion": "1.19.3",
+    "template": "Basic V2",
+    "generatorName": "SAP Fiori Application Generator",
+    "entityRelatedConfig": [],
+    "launchText": "To launch the generated application, run the following from the generated application root folder:\n\n```\n    npm start\n```"
+  }
+}

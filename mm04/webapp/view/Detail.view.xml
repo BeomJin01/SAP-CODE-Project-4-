@@ -1,0 +1,13 @@
+<mvc:View
+    controllerName="code.t4.ui5.mm04.controller.Detail"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    displayBlock="true">
+    <Page
+        id="detailPage"
+        title="MPS 결과 상세"
+        showNavButton="true"
+        navButtonPress=".onNavBack">
+        <content/>
+    </Page>
+</mvc:View>
