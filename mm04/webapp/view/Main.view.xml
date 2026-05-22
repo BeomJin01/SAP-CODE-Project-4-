@@ -6,348 +6,332 @@
     xmlns:f="sap.ui.layout.form"
     displayBlock="true"
 >
+    <!-- View1: MPS 실행 목록 조회 화면 -->
     <Page
         id="mainPage"
         title="{i18n>mainTitle}"
-        showHeader="true"
-    >
-        <!-- 헤더 우측 대시보드 버튼 -->
+        >
+
+        <!-- 헤더 우측: 대시보드 버튼 -->
         <headerContent>
             <Button
                 id="btnDashboard"
                 icon="sap-icon://horizontal-bar-chart"
                 text="{i18n>btnDashboard}"
-                press=".onNavToDashboard"
-            />
+                press=".onNavToDashboard"/>
         </headerContent>
 
         <content>
-            <!-- 조회 조건 패널 (SimpleForm) -->
+
+            <!-- 조회 조건 패널 -->
             <Panel
                 id="searchPanel"
                 headerText="{i18n>searchCondition}"
                 expandable="false"
-            >
+                width="auto">
                 <content>
-                    <f:SimpleForm
-                        id="searchForm"
-                        editable="true"
-                        layout="ResponsiveGridLayout"
-                        labelSpanXL="2"
-                        labelSpanL="2"
-                        labelSpanM="3"
-                        labelSpanS="12"
-                        emptySpanXL="4"
-                        emptySpanL="4"
-                        emptySpanM="4"
-                        columnsXL="2"
-                        columnsL="2"
-                        columnsM="1"
-                    >
-                        <!-- Row 1: MPS 실행 ID From ~ To -->
-                        <f:content>
-                            <Label
-                                text="{i18n>lblMpsRunId}"
-                                labelFor="inputRunIdFrom"
-                            />
-                            <HBox alignItems="Center">
-                                <Input
-                                    id="inputRunIdFrom"
-                                    placeholder="From"
-                                    maxLength="12"
-                                    width="12rem"
-                                    value="{viewModel>/searchRunIdFrom}"
-                                />
-                                <Text
-                                    text="~"
-                                    class="sapUiSmallMarginBeginEnd"
-                                />
-                                <Input
-                                    id="inputRunIdTo"
-                                    placeholder="To"
-                                    maxLength="12"
-                                    width="12rem"
-                                    value="{viewModel>/searchRunIdTo}"
-                                />
-                                <!-- F4 서치헬프 버튼 -->
-                                <Button
-                                    icon="sap-icon://value-help"
-                                    press=".onMpsRunIdF4"
-                                    tooltip="MPS 실행 ID 검색"
-                                />
-                            </HBox>
 
-                            <!-- Row 1 우측: 플랜트 -->
-                            <Label
-                                text="{i18n>lblWerks}"
-                                labelFor="inputWerks"
-                            />
-                            <HBox alignItems="Center">
-                                <Input
-                                    id="inputWerks"
-                                    placeholder="플랜트"
-                                    maxLength="4"
-                                    width="8rem"
-                                    value="{viewModel>/searchWerks}"
-                                />
-                                <Button
-                                    icon="sap-icon://value-help"
-                                    press=".onPlantF4"
-                                    tooltip="플랜트 검색"
-                                />
-                            </HBox>
+                    <!--
+                        Grid 레이아웃으로 조회 조건 2컬럼 배치
+                        defaultSpan: XL6 L6 M12 S12
+                        → XL/L 화면: 2컬럼 (각 50%)
+                        → M/S 화면: 1컬럼 (100%)
+                    -->
+                    <l:Grid
+                        id="searchGrid"
+                        defaultSpan="XL6 L6 M12 S12"
+                        class="sapUiSmallMarginTop">
 
-                            <!-- Row 2: 자재코드 -->
-                            <Label
-                                text="{i18n>lblMatnr}"
-                                labelFor="inputMatnr"
-                            />
-                            <HBox alignItems="Center">
-                                <Input
-                                    id="inputMatnr"
-                                    placeholder="자재코드"
-                                    maxLength="18"
-                                    width="16rem"
-                                    value="{viewModel>/searchMatnr}"
-                                />
-                                <Button
-                                    icon="sap-icon://value-help"
-                                    press=".onMaterialF4"
-                                    tooltip="자재 검색"
-                                />
-                                <Text
-                                    id="txtMaktx"
-                                    text="{viewModel>/searchMaktx}"
-                                    class="sapUiSmallMarginBegin"
-                                />
-                            </HBox>
+                        <!-- 좌측 컬럼 -->
+                        <l:content>
 
-                            <!-- Row 2 우측: 실행상태 -->
-                            <Label
-                                text="{i18n>lblStatus}"
-                                labelFor="cbStatus"
-                            />
-                            <Select
-                                id="cbStatus"
-                                selectedKey="{viewModel>/searchStatus}"
-                                width="12rem"
-                            >
-                                <items>
-                                    <core:Item
-                                        xmlns:core="sap.ui.core"
-                                        key=""
-                                        text="{i18n>lblAll}"
-                                    />
-                                    <core:Item
-                                        xmlns:core="sap.ui.core"
-                                        key="EC"
-                                        text="{i18n>statusEC}"
-                                    />
-                                    <core:Item
-                                        xmlns:core="sap.ui.core"
-                                        key="EF"
-                                        text="{i18n>statusEF}"
-                                    />
-                                    <core:Item
-                                        xmlns:core="sap.ui.core"
-                                        key="CN"
-                                        text="{i18n>statusCN}"
-                                    />
-                                </items>
-                            </Select>
+                            <!-- 조회 조건 좌측 VBox -->
+                            <VBox class="sapUiSmallMarginEnd">
 
-                            <!-- Row 3: 계획 시작일 DateRangeSelection -->
-                            <Label
-                                text="{i18n>lblPlanStartDate}"
-                                labelFor="drsStartDate"
-                            />
-                            <DateRangeSelection
-                                id="drsStartDate"
-                                displayFormat="yyyy.MM.dd"
-                                valueFormat="yyyy-MM-dd"
-                                placeholder="YYYY.MM.DD ~ YYYY.MM.DD"
-                                width="20rem"
-                            />
+                                <!-- Row1 좌: MPS 실행 ID (From ~ To + F4) -->
+                                <HBox alignItems="Center" class="sapUiSmallMarginBottom">
+                                    <Label
+                                        text="{i18n>lblMpsRunId}"
+                                        width="8rem"
+                                        textAlign="Right"
+                                        class="sapUiSmallMarginEnd"/>
+                                    <Input
+                                        id="inputRunIdFrom"
+                                        placeholder="From"
+                                        maxLength="12"
+                                        width="10rem"
+                                        value="{viewModel>/searchRunIdFrom}"/>
+                                    <Text text="~" class="sapUiSmallMarginBeginEnd"/>
+                                    <Input
+                                        id="inputRunIdTo"
+                                        placeholder="To"
+                                        maxLength="12"
+                                        width="10rem"
+                                        value="{viewModel>/searchRunIdTo}"/>
+                                    <!-- MPS 실행 ID F4 서치헬프 -->
+                                    <Button
+                                        icon="sap-icon://value-help"
+                                        press=".onMpsRunIdF4"
+                                        tooltip="MPS 실행 ID 검색"/>
+                                </HBox>
 
-                            <!-- Row 3 우측: 계획 종료일 DateRangeSelection -->
-                            <Label
-                                text="{i18n>lblPlanEndDate}"
-                                labelFor="drsEndDate"
-                            />
-                            <DateRangeSelection
-                                id="drsEndDate"
-                                displayFormat="yyyy.MM.dd"
-                                valueFormat="yyyy-MM-dd"
-                                placeholder="YYYY.MM.DD ~ YYYY.MM.DD"
-                                width="20rem"
-                            />
-                        </f:content>
-                    </f:SimpleForm>
+                                <!-- Row2 좌: 플랜트 (Input + F4) -->
+                                <HBox alignItems="Center" class="sapUiSmallMarginBottom">
+                                    <Label
+                                        text="{i18n>lblWerks}"
+                                        width="8rem"
+                                        textAlign="Right"
+                                        class="sapUiSmallMarginEnd"/>
+                                    <Input
+                                        id="inputWerks"
+                                        placeholder="플랜트"
+                                        maxLength="4"
+                                        width="8rem"
+                                        value="{viewModel>/searchWerks}"/>
+                                    <!-- 플랜트 F4 서치헬프 -->
+                                    <Button
+                                        icon="sap-icon://value-help"
+                                        press=".onPlantF4"
+                                        tooltip="플랜트 검색"/>
+                                </HBox>
 
-                    <!-- 조회/초기화 버튼 -->
-                    <HBox
-                        justifyContent="Center"
-                        class="sapUiSmallMarginTop"
-                    >
-                        <Button
-                            id="btnSearch"
-                            text="{i18n>btnSearch}"
-                            type="Emphasized"
-                            icon="sap-icon://search"
-                            press=".onSearch"
-                        />
-                        <Button
-                            id="btnReset"
-                            text="{i18n>btnReset}"
-                            icon="sap-icon://clear-filter"
-                            press=".onReset"
-                            class="sapUiSmallMarginBegin"
-                        />
-                    </HBox>
+                                <!-- Row3 좌: 자재코드 (Input + F4 + 자재명) -->
+                                <HBox alignItems="Center" class="sapUiSmallMarginBottom">
+                                    <Label
+                                        text="{i18n>lblMatnr}"
+                                        width="8rem"
+                                        textAlign="Right"
+                                        class="sapUiSmallMarginEnd"/>
+                                    <Input
+                                        id="inputMatnr"
+                                        placeholder="자재코드"
+                                        maxLength="18"
+                                        width="14rem"
+                                        value="{viewModel>/searchMatnr}"/>
+                                    <!-- 자재 F4 서치헬프 -->
+                                    <Button
+                                        icon="sap-icon://value-help"
+                                        press=".onMaterialF4"
+                                        tooltip="자재 검색"/>
+                                    <!-- F4 선택 후 자재명 표시 -->
+                                    <Text
+                                        id="txtMaktx"
+                                        text="{viewModel>/searchMaktx}"
+                                        class="sapUiSmallMarginBegin"/>
+                                </HBox>
+
+                            </VBox>
+
+                            <!-- 우측 컬럼 -->
+                            <VBox>
+
+                                <!-- Row1 우: 계획 시작일 (DateRangeSelection) -->
+                                <HBox alignItems="Center" class="sapUiSmallMarginBottom">
+                                    <Label
+                                        text="{i18n>lblPlanStartDate}"
+                                        width="8rem"
+                                        textAlign="Right"
+                                        class="sapUiSmallMarginEnd"/>
+                                    <!--
+                                        DateRangeSelection:
+                                        단건: From=To 동일값 → 해당 날짜 단건 조회
+                                        범위: From~To → 해당 범위 조회
+                                        UTC 변환은 Controller에서 Date.UTC() 처리
+                                    -->
+                                    <DateRangeSelection
+                                        id="drsStartDate"
+                                        displayFormat="yyyy.MM.dd"
+                                        valueFormat="yyyy-MM-dd"
+                                        placeholder="YYYY.MM.DD ~ YYYY.MM.DD"
+                                        width="20rem"/>
+                                </HBox>
+
+                                <!-- Row2 우: 계획 종료일 (DateRangeSelection) -->
+                                <HBox alignItems="Center" class="sapUiSmallMarginBottom">
+                                    <Label
+                                        text="{i18n>lblPlanEndDate}"
+                                        width="8rem"
+                                        textAlign="Right"
+                                        class="sapUiSmallMarginEnd"/>
+                                    <DateRangeSelection
+                                        id="drsEndDate"
+                                        displayFormat="yyyy.MM.dd"
+                                        valueFormat="yyyy-MM-dd"
+                                        placeholder="YYYY.MM.DD ~ YYYY.MM.DD"
+                                        width="20rem"/>
+                                </HBox>
+
+                                <!-- Row3 우: 실행상태 + 조회/초기화 버튼 -->
+                                <HBox
+                                    alignItems="Center"
+                                    justifyContent="SpaceBetween"
+                                    class="sapUiSmallMarginBottom">
+                                    <!-- 실행상태 Select -->
+                                    <HBox alignItems="Center">
+                                        <Label
+                                            text="{i18n>lblStatus}"
+                                            width="8rem"
+                                            textAlign="Right"
+                                            class="sapUiSmallMarginEnd"/>
+                                        <Select
+                                            id="cbStatus"
+                                            selectedKey="{viewModel>/searchStatus}"
+                                            width="10rem">
+                                            <items>
+                                                <core:Item xmlns:core="sap.ui.core" key="" text="{i18n>lblAll}"/>
+                                                <core:Item xmlns:core="sap.ui.core" key="EC" text="{i18n>statusEC}"/>
+                                                <core:Item xmlns:core="sap.ui.core" key="EF" text="{i18n>statusEF}"/>
+                                                <core:Item xmlns:core="sap.ui.core" key="CN" text="{i18n>statusCN}"/>
+                                            </items>
+                                        </Select>
+                                    </HBox>
+                                    <!-- 조회/초기화 버튼 → 최우측 배치 -->
+                                    <HBox alignItems="Center">
+                                        <Button
+                                            id="btnSearch"
+                                            text="{i18n>btnSearch}"
+                                            type="Emphasized"
+                                            icon="sap-icon://search"
+                                            press=".onSearch"/>
+                                        <Button
+                                            id="btnReset"
+                                            text="{i18n>btnReset}"
+                                            icon="sap-icon://clear-filter"
+                                            press=".onReset"
+                                            class="sapUiSmallMarginBegin"/>
+                                    </HBox>
+                                </HBox>
+
+                            </VBox>
+
+                        </l:content>
+                    </l:Grid>
+
                 </content>
             </Panel>
 
             <!-- 결과 테이블 영역 -->
             <VBox class="sapUiSmallMarginTop">
-                <!-- 테이블 상단 툴바 (건수 + 엑셀/새로고침) -->
+
+                <!-- 테이블 상단: 건수(좌) + 새로고침(우) -->
                 <HBox
                     justifyContent="SpaceBetween"
                     alignItems="Center"
-                    class="sapUiSmallMarginBeginEnd"
-                >
-                    <Text
-                        id="txtResultCount"
-                        text="총 0건"
-                    />
-                    <HBox>
-                        <Button
-                            id="btnExcel"
-                            icon="sap-icon://excel-attachment"
-                            text="{i18n>btnExcel}"
-                            press=".onExcelExport"
-                        />
-                        <Button
-                            id="btnRefresh"
-                            icon="sap-icon://refresh"
-                            text="{i18n>btnRefresh}"
-                            press=".onRefresh"
-                            class="sapUiSmallMarginBegin"
-                        />
-                    </HBox>
+                    class="sapUiSmallMarginBeginEnd">
+                    <!-- SAP GUI MPS 프로그램과 동일한 형식 -->
+                    <Text id="txtResultCount" text="MPS 실행 목록: 0건"/>
+                    <Button
+                        id="btnRefresh"
+                        icon="sap-icon://refresh"
+                        text="{i18n>btnRefresh}"
+                        press=".onRefresh"/>
                 </HBox>
 
-                <!-- 결과 테이블 -->
+                <!--
+                    결과 테이블
+                    growing: 50건씩 추가 로드
+                    sticky: 스크롤 시 컬럼 헤더 고정
+                -->
                 <Table
                     id="mainTable"
                     items="{mainTableModel>/items}"
                     noDataText="{i18n>msgNoData}"
                     growing="true"
                     growingThreshold="50"
-                    sticky="ColumnHeaders"
-                >
+                    sticky="ColumnHeaders">
+
                     <columns>
-                        <Column
-                            width="4rem"
-                            hAlign="Center"
-                        >
-                            <Text text="{i18n>colStatus}" />
+                        <!-- 상태: 헤더 STATUS 기준 LED (EC=파랑/EF=빨강/CN=회색) -->
+                        <Column width="4rem" hAlign="Center">
+                            <Text text="{i18n>colStatus}"/>
                         </Column>
+                        <!-- 상태상세: 아이템 STATUS 기준 텍스트 (AP=확정포함/WA=승인대기/CN=계획취소) -->
                         <Column width="8rem">
-                            <Text text="{i18n>colStatusDetail}" />
+                            <Text text="{i18n>colStatusDetail}"/>
                         </Column>
+                        <!-- 실행상태: 헤더 STATUS 텍스트 (실행완료/실행실패/실행취소) -->
+                        <Column width="8rem">
+                            <Text text="{i18n>colStatusText}"/>
+                        </Column>
+                        <!-- MPS 실행 ID: 클릭 시 Detail 화면으로 이동 -->
                         <Column width="12rem">
-                            <Text text="{i18n>colMpsRunId}" />
+                            <Text text="{i18n>colMpsRunId}"/>
+                        </Column>
+                        <Column width="10rem" hAlign="Center">
+                            <Text text="{i18n>colPlanStartDate}"/>
+                        </Column>
+                        <Column width="10rem" hAlign="Center">
+                            <Text text="{i18n>colPlanEndDate}"/>
                         </Column>
                         <Column width="6rem">
-                            <Text text="{i18n>colWerks}" />
+                            <Text text="{i18n>colWerks}"/>
                         </Column>
                         <Column width="10rem">
-                            <Text text="{i18n>colPlantName}" />
+                            <Text text="{i18n>colPlantName}"/>
                         </Column>
                         <Column width="12rem">
-                            <Text text="{i18n>colMatnr}" />
+                            <Text text="{i18n>colMatnr}"/>
                         </Column>
-                        <Column width="16rem">
-                            <Text text="{i18n>colMaktx}" />
+                        <Column>
+                            <Text text="{i18n>colMaktx}"/>
                         </Column>
-                        <Column
-                            width="10rem"
-                            hAlign="Center"
-                        >
-                            <Text text="{i18n>colPlanStartDate}" />
-                        </Column>
-                        <Column
-                            width="10rem"
-                            hAlign="Center"
-                        >
-                            <Text text="{i18n>colPlanEndDate}" />
-                        </Column>
-                        <Column
-                            width="10rem"
-                            hAlign="Center"
-                        >
-                            <Text text="{i18n>colRunDate}" />
+                        <Column width="10rem" hAlign="Center">
+                            <Text text="{i18n>colRunDate}"/>
                         </Column>
                         <Column width="8rem">
-                            <Text text="{i18n>colErnam}" />
+                            <Text text="{i18n>colErnam}"/>
                         </Column>
-                        <Column
-                            width="10rem"
-                            hAlign="Center"
-                        >
-                            <Text text="{i18n>colEarliestWaDate}" />
+                        <!-- 최초 승인대기일: WA 아이템 중 최소 주차일 (없으면 빈값) -->
+                        <Column width="10rem" hAlign="Center">
+                            <Text text="{i18n>colEarliestWaDate}"/>
+                        </Column>
+                        <Column width="8rem" hAlign="Center">
+                            <Text text="{i18n>colErdat}"/>
                         </Column>
                     </columns>
 
                     <items>
+                        <!-- 행 클릭 시 onRowPress → RouteDetail navTo -->
                         <ColumnListItem
-                            id="mainTableItem"
                             type="Navigation"
-                            press=".onRowPress"
-                        >
+                            press=".onRowPress">
                             <cells>
-                                <!-- 상태 LED (ObjectStatus icon) -->
+                                <!-- LED: formatter.statusIcon/statusState → ObjectStatus icon/state -->
                                 <ObjectStatus
                                     icon="{path: 'mainTableModel>Status', formatter: '.formatter.statusIcon'}"
-                                    state="{path: 'mainTableModel>Status', formatter: '.formatter.statusState'}"
-                                />
+                                    state="{path: 'mainTableModel>Status', formatter: '.formatter.statusState'}"/>
 
-                                <!-- 상태상세 (아이템 기준) -->
+                                <!-- 상태상세: formatter.itemStatusText/itemStatusState -->
+                                <!-- AP=확정포함(초록), WA=승인대기(노랑), CN=계획취소(빨강) -->
                                 <ObjectStatus
                                     text="{path: 'mainTableModel>ItemStatus', formatter: '.formatter.itemStatusText'}"
-                                    state="{path: 'mainTableModel>ItemStatus', formatter: '.formatter.itemStatusState'}"
-                                />
+                                    state="{path: 'mainTableModel>ItemStatus', formatter: '.formatter.itemStatusState'}"/>
 
-                                <!-- MPS 실행 ID (클릭 → Detail) -->
+                                <!-- 실행상태: formatter.statusText → 실행완료/실행실패/실행취소 -->
+                                <Text text="{path: 'mainTableModel>Status', formatter: '.formatter.statusText'}"/>
+
+                                <!-- MPS 실행 ID: Link 클릭 시 onRowPress 호출 -->
                                 <Link
                                     text="{mainTableModel>MpsRunId}"
-                                    press=".onRowPress"
-                                />
+                                    press=".onRowPress"/>
 
-                                <Text text="{mainTableModel>Werks}" />
-                                <Text text="{mainTableModel>PlantName}" />
-                                <Text text="{mainTableModel>Matnr}" />
-                                <Text text="{mainTableModel>Maktx}" />
-
-                                <Text
-                                    text="{path: 'mainTableModel>PlanStartDate', formatter: '.formatter.formatDate'}"
-                                />
-                                <Text
-                                    text="{path: 'mainTableModel>PlanEndDate', formatter: '.formatter.formatDate'}"
-                                />
-                                <Text
-                                    text="{path: 'mainTableModel>RunDate', formatter: '.formatter.formatDate'}"
-                                />
-
-                                <Text text="{mainTableModel>Ernam}" />
-                                <Text
-                                    text="{path: 'mainTableModel>EarliestWaDate', formatter: '.formatter.formatDate'}"
-                                />
+                                <Text text="{path: 'mainTableModel>PlanStartDate', formatter: '.formatter.formatDate'}"/>
+                                <Text text="{path: 'mainTableModel>PlanEndDate', formatter: '.formatter.formatDate'}"/>
+                                <Text text="{mainTableModel>Werks}"/>
+                                <Text text="{mainTableModel>PlantName}"/>
+                                <Text text="{mainTableModel>Matnr}"/>
+                                <Text text="{mainTableModel>Maktx}"/>
+                                <Text text="{path: 'mainTableModel>RunDate', formatter: '.formatter.formatDate'}"/>
+                                <Text text="{mainTableModel>Ernam}"/>
+                                <!-- EarliestWaDate: null이면 빈값 표시 -->
+                                <Text text="{path: 'mainTableModel>EarliestWaDate', formatter: '.formatter.formatDate'}"/>
+                                <Text text="{path: 'mainTableModel>Erdat', formatter: '.formatter.formatDate'}"/>
                             </cells>
                         </ColumnListItem>
                     </items>
                 </Table>
             </VBox>
+
         </content>
     </Page>
 </mvc:View>
