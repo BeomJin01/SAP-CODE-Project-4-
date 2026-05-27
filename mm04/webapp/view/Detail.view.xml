@@ -2,12 +2,884 @@
     controllerName="code.t4.ui5.mm04.controller.Detail"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
-    displayBlock="true">
+    xmlns:l="sap.ui.layout"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:ui="sap.ui.table"
+    xmlns:rowmodes="sap.ui.table.rowmodes"
+    xmlns:core="sap.ui.core"
+    xmlns:viz="sap.viz.ui5.controls"
+    xmlns:vizData="sap.viz.ui5.data"
+    xmlns:vizFeeds="sap.viz.ui5.controls.common.feeds"
+    displayBlock="true"
+>
     <Page
         id="detailPage"
-        title="MPS 결과 상세"
+        title="{i18n>detailTitle}"
         showNavButton="true"
-        navButtonPress=".onNavBack">
-        <content/>
+        navButtonPress=".onNavBack"
+    >
+        <content>
+            <!-- 헤더 정보 패널 -->
+            <Panel
+                id="headerPanel"
+                headerText="{i18n>detailHeaderPanel}"
+                expandable="false"
+                class="sapUiSmallMarginTop"
+            >
+                <!-- 1행: MPS실행ID / 자재번호 / 상태상세 / 계획시작일 / 실행일자 -->
+                <HBox
+                    width="100%"
+                    class="sapUiSmallMarginTop sapUiSmallMarginBottom"
+                >
+                    <!-- 1행 1열: MPS 실행 ID -->
+                    <VBox
+                        width="20%"
+                        class="sapUiSmallMarginBegin"
+                    >
+                        <HBox
+                            alignItems="Start"
+                            wrap="Wrap"
+                        >
+                            <Label
+                                text="{i18n>lblDetailRunId}"
+                                design="Bold"
+                            />
+                            <Text
+                                text=":"
+                                class="sapUiTinyMarginBegin sapUiTinyMarginEnd"
+                            />
+                            <!-- wrapping: 값이 길면 레이블 아래로 줄바꿈 -->
+                            <Text
+                                text="{detailModel>/MpsRunId}"
+                                wrapping="true"
+                            />
+                        </HBox>
+                    </VBox>
+
+                    <!-- 1행 2열: 자재번호 -->
+                    <VBox width="20%">
+                        <HBox
+                            alignItems="Start"
+                            wrap="Wrap"
+                        >
+                            <Label
+                                text="{i18n>lblDetailMatnr}"
+                                design="Bold"
+                            />
+                            <Text
+                                text=":"
+                                class="sapUiTinyMarginBegin sapUiTinyMarginEnd"
+                            />
+                            <Text
+                                text="{detailModel>/Matnr}"
+                                wrapping="true"
+                            />
+                        </HBox>
+                    </VBox>
+
+                    <!-- 1행 3열: 상태상세 -->
+                    <VBox width="20%">
+                        <HBox
+                            alignItems="Start"
+                            wrap="Wrap"
+                        >
+                            <Label
+                                text="{i18n>colStatusDetail}"
+                                design="Bold"
+                            />
+                            <Text
+                                text=":"
+                                class="sapUiTinyMarginBegin sapUiTinyMarginEnd"
+                            />
+                            <!-- ObjectStatus는 wrapping 미지원 → 짧은 텍스트라 문제없음 -->
+                            <ObjectStatus
+                                text="{
+                    parts: [
+                        {path: 'detailModel>/Status'},
+                        {path: 'detailModel>/EarliestWaDate'}
+                    ],
+                    formatter: '.formatter.headerToItemStatusText'
+                }"
+                                state="{
+                    parts: [
+                        {path: 'detailModel>/Status'},
+                        {path: 'detailModel>/EarliestWaDate'}
+                    ],
+                    formatter: '.formatter.statusState'
+                }"
+                            />
+                        </HBox>
+                    </VBox>
+
+                    <!-- 1행 4열: 계획 시작일 -->
+                    <VBox width="20%">
+                        <HBox
+                            alignItems="Start"
+                            wrap="Wrap"
+                        >
+                            <Label
+                                text="{i18n>lblDetailPlanStartDate}"
+                                design="Bold"
+                            />
+                            <Text
+                                text=":"
+                                class="sapUiTinyMarginBegin sapUiTinyMarginEnd"
+                            />
+                            <Text
+                                text="{path: 'detailModel>/PlanStartDate', formatter: '.formatter.formatDate'}"
+                                wrapping="true"
+                            />
+                        </HBox>
+                    </VBox>
+
+                    <!-- 1행 5열: 실행일자 -->
+                    <VBox width="20%">
+                        <HBox
+                            alignItems="Start"
+                            wrap="Wrap"
+                        >
+                            <Label
+                                text="{i18n>lblDetailRunDate}"
+                                design="Bold"
+                            />
+                            <Text
+                                text=":"
+                                class="sapUiTinyMarginBegin sapUiTinyMarginEnd"
+                            />
+                            <Text
+                                text="{path: 'detailModel>/RunDate', formatter: '.formatter.formatDate'}"
+                                wrapping="true"
+                            />
+                        </HBox>
+                    </VBox>
+                </HBox>
+
+                <!-- 2행: 플랜트 / 자재명 / 실행상태 / 계획종료일 / 실행자 -->
+                <HBox
+                    width="100%"
+                    class="sapUiSmallMarginBottom"
+                >
+                    <!-- 2행 1열: 플랜트 — "1000 (생산 공장)" 형식 -->
+                    <VBox
+                        width="20%"
+                        class="sapUiSmallMarginBegin"
+                    >
+                        <HBox
+                            alignItems="Start"
+                            wrap="Wrap"
+                        >
+                            <Label
+                                text="{i18n>lblDetailWerks}"
+                                design="Bold"
+                            />
+                            <Text
+                                text=":"
+                                class="sapUiTinyMarginBegin sapUiTinyMarginEnd"
+                            />
+                            <Text
+                                text="{detailModel>/Werks} ({detailModel>/PlantName})"
+                                wrapping="true"
+                            />
+                        </HBox>
+                    </VBox>
+
+                    <!-- 2행 2열: 자재명 — 길면 "자재명 : 첫줄\n나머지줄" 형태로 줄바꿈 -->
+                    <VBox width="20%">
+                        <!--
+            wrap="Wrap": HBox 너비 초과 시 다음 줄로 내려감
+            wrapping="true": Text 자체도 줄바꿈 허용
+            alignItems="Start": 줄바꿈 시 레이블 상단 정렬
+        -->
+                        <HBox
+                            alignItems="Start"
+                            wrap="Wrap"
+                        >
+                            <Label
+                                text="{i18n>lblDetailMatnrName}"
+                                design="Bold"
+                            />
+                            <Text
+                                text=":"
+                                class="sapUiTinyMarginBegin sapUiTinyMarginEnd"
+                            />
+                            <Text
+                                text="{detailModel>/Maktx}"
+                                wrapping="true"
+                            />
+                        </HBox>
+                    </VBox>
+
+                    <!-- 2행 3열: 실행상태 -->
+                    <VBox width="20%">
+                        <HBox
+                            alignItems="Start"
+                            wrap="Wrap"
+                        >
+                            <Label
+                                text="{i18n>lblDetailStatus}"
+                                design="Bold"
+                            />
+                            <Text
+                                text=":"
+                                class="sapUiTinyMarginBegin sapUiTinyMarginEnd"
+                            />
+                            <ObjectStatus
+                                text="{path: 'detailModel>/Status', formatter: '.formatter.statusText'}"
+                                state="{path: 'detailModel>/Status', formatter: '.formatter.statusTextState'}"
+                            />
+                        </HBox>
+                    </VBox>
+
+                    <!-- 2행 4열: 계획 종료일 -->
+                    <VBox width="20%">
+                        <HBox
+                            alignItems="Start"
+                            wrap="Wrap"
+                        >
+                            <Label
+                                text="{i18n>lblDetailPlanEndDate}"
+                                design="Bold"
+                            />
+                            <Text
+                                text=":"
+                                class="sapUiTinyMarginBegin sapUiTinyMarginEnd"
+                            />
+                            <Text
+                                text="{path: 'detailModel>/PlanEndDate', formatter: '.formatter.formatDate'}"
+                                wrapping="true"
+                            />
+                        </HBox>
+                    </VBox>
+
+                    <!-- 2행 5열: 실행자 -->
+                    <VBox width="20%">
+                        <HBox
+                            alignItems="Start"
+                            wrap="Wrap"
+                        >
+                            <Label
+                                text="{i18n>lblDetailErnam}"
+                                design="Bold"
+                            />
+                            <Text
+                                text=":"
+                                class="sapUiTinyMarginBegin sapUiTinyMarginEnd"
+                            />
+                            <Text
+                                text="{detailModel>/Ernam}"
+                                wrapping="true"
+                            />
+                        </HBox>
+                    </VBox>
+                </HBox>
+            </Panel>
+
+            <!-- 탭 영역 -->
+            <IconTabBar
+                id="detailTabBar"
+                class="sapUiSmallMarginTop"
+                select=".onTabSelect"
+            >
+                <items>
+                    <!-- ===================== -->
+                    <!-- 탭1: 주차별 결과 테이블 -->
+                    <!-- ===================== -->
+                    <IconTabFilter
+                        id="tabResult"
+                        text="{i18n>tab1}"
+                        icon="sap-icon://table-view"
+                        key="tabResult"
+                    >
+                        <content>
+                            <!-- 건수 표시 -->
+                            <HBox
+                                justifyContent="SpaceBetween"
+                                alignItems="Center"
+                                class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop"
+                            >
+                                <Text
+                                    id="txtItemCount"
+                                    text="MPS 계획 아이템: 0건"
+                                />
+                            </HBox>
+
+                            <!--
+                                sap.ui.table.Table:
+                                - selectionMode="None": 체크박스 완전 제거
+                                - visibleRowCountMode="Auto": 데이터 건수에 맞게 행 높이 자동 조절
+                                - enableColumnReordering="false": 컬럼 순서 변경 비활성화
+                                - alternateRowColors="true": 홀짝 행 색상 교대 (가독성)
+                                - rows: sap.m.Table의 items에 해당
+                                - 각 컬럼: label(헤더) + template(셀 내용) 구조
+                            -->
+                            <ui:Table
+                                id="itemTable"
+                                rows="{itemTableModel>/items}"
+                                noData="{i18n>msgNoData}"
+                                selectionMode="None"
+                                enableColumnReordering="false"
+                                alternateRowColors="true"
+                                class="sapUiSmallMarginTop"
+                            >
+                                <ui:rowMode>
+                                    <rowmodes:Fixed rowCount="20" />
+                                </ui:rowMode>
+
+                                <ui:columns>
+                                    <!-- 1. 상태 LED 아이콘 (AP=초록/WA=노랑/CN,RJ=빨강) -->
+                                    <ui:Column
+                                        width="4rem"
+                                        hAlign="Center"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colStatus}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <ObjectStatus
+                                                icon="{path: 'itemTableModel>Status', formatter: '.formatter.itemStatusIcon'}"
+                                                state="{path: 'itemTableModel>Status', formatter: '.formatter.itemStatusState'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 2. 상태상세 텍스트 (승인완료/승인대기/계획취소/반려) -->
+                                    <ui:Column width="6rem">
+                                        <ui:label>
+                                            <Label
+                                                text="{i18n>colStatusDetail}"
+                                            />
+                                        </ui:label>
+                                        <ui:template>
+                                            <ObjectStatus
+                                                text="{path: 'itemTableModel>Status', formatter: '.formatter.itemStatusText'}"
+                                                state="{path: 'itemTableModel>Status', formatter: '.formatter.itemStatusState'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 3. MPS 결과 ID (ZTD4MM0010 Key: MPS_RESULT_ID) -->
+                                    <ui:Column width="9rem">
+                                        <ui:label>
+                                            <Label
+                                                text="{i18n>colMpsResultId}"
+                                            />
+                                        </ui:label>
+                                        <ui:template>
+                                            <!-- 파란색 Link, wrapping -->
+                                            <Link
+                                                text="{itemTableModel>MpsResultId}"
+                                                wrapping="true"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 4. MPS 실행 ID (ZTD4MM0009 연결 Key: MPS_RUN_ID) -->
+                                    <ui:Column width="9rem">
+                                        <ui:label>
+                                            <Label text="{i18n>colMpsRunId}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <!-- 파란색 Link, wrapping -->
+                                            <Link
+                                                text="{itemTableModel>MpsRunId}"
+                                                wrapping="true"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 5. 주차 (BUCKET_NO: 1~N 주차 번호) -->
+                                    <ui:Column
+                                        width="4rem"
+                                        hAlign="Center"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colBucketNo}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{itemTableModel>BucketNo}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 6. 주차 대표일 (PLAN_DATE: 해당 주차 월요일 날짜) -->
+                                    <ui:Column
+                                        width="7rem"
+                                        hAlign="Center"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colPlanDate}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{path: 'itemTableModel>PlanDate', formatter: '.formatter.formatDate'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 7. 저장위치 코드 (LGORT) -->
+                                    <ui:Column
+                                        width="5rem"
+                                        hAlign="Center"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colLgort}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{itemTableModel>Lgort}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 8. 저장위치명 (ZTD4MM0002 조인: LGOBE) -->
+                                    <ui:Column width="7rem">
+                                        <ui:label>
+                                            <Label text="{i18n>colLgobe}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{itemTableModel>Lgobe}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 9. 자재번호 (MATNR) -->
+                                    <ui:Column width="9rem">
+                                        <ui:label>
+                                            <Label text="{i18n>colMatnr}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{itemTableModel>Matnr}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 10. 자재명 (ZTD4MM0016 조인: MAKTX) -->
+                                    <ui:Column width="24rem">
+                                        <ui:label>
+                                            <Label text="{i18n>colMaktx}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{itemTableModel>Maktx}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 11. MPS 수량 (MPS_QTY: 해당 주차 MPS 계획 생산수량) -->
+                                    <ui:Column
+                                        width="6rem"
+                                        hAlign="Right"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colMpsQty}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{path: 'itemTableModel>MpsQty', formatter: '.formatter.formatQty'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 12. MPS 개시량 (MPS_REL_QTY: 실제 투입/개시 수량) -->
+                                    <ui:Column
+                                        width="6rem"
+                                        hAlign="Right"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colMpsRelQty}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{path: 'itemTableModel>MpsRelQty', formatter: '.formatter.formatQty'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 13. 예측수요량 (FCST_QTY: 수요예측 기반 수요량) -->
+                                    <ui:Column
+                                        width="6rem"
+                                        hAlign="Right"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colFcstQty}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{path: 'itemTableModel>FcstQty', formatter: '.formatter.formatQty'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 14. 주문량 (ORDER_QTY: 실제 수주/주문 수량) -->
+                                    <ui:Column
+                                        width="5rem"
+                                        hAlign="Right"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colOrderQty}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{path: 'itemTableModel>OrderQty', formatter: '.formatter.formatQty'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 15. ATP 수량 (ATP_QTY: Available To Promise, 가용 약속 수량) -->
+                                    <ui:Column
+                                        width="6rem"
+                                        hAlign="Right"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colAtpQty}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{path: 'itemTableModel>AtpQty', formatter: '.formatter.formatQty'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 16. 안전재고량 (SAFETY_STOCK_QTY: 최소 유지 재고 기준량) -->
+                                    <ui:Column
+                                        width="6rem"
+                                        hAlign="Right"
+                                    >
+                                        <ui:label>
+                                            <Label
+                                                text="{i18n>colSafetyStockQty}"
+                                            />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{path: 'itemTableModel>SafetyStockQty', formatter: '.formatter.formatQty'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 17. 안전재고유형 (SS_TYPE: A=자동계산 / M=수동입력) -->
+                                    <ui:Column width="8rem">
+                                        <ui:label>
+                                            <Label text="{i18n>colSsType}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{path: 'itemTableModel>SsType', formatter: '.formatter.ssTypeText'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 18. 예상재고량 (PROJECTED_AVAIL_QTY: 주차 말 기준 예상 보유재고) -->
+                                    <ui:Column
+                                        width="6rem"
+                                        hAlign="Right"
+                                    >
+                                        <ui:label>
+                                            <Label
+                                                text="{i18n>colProjectedAvailQty}"
+                                            />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{path: 'itemTableModel>ProjectedAvailQty', formatter: '.formatter.formatQty'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 19. 단위 (MEINS: 기본 단위, 예: EA/KG 등) -->
+                                    <ui:Column
+                                        width="4rem"
+                                        hAlign="Center"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colMeins}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{itemTableModel>Meins}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 20. 로트사이즈 (LOT_SIZE: 최소 생산 단위 수량) -->
+                                    <ui:Column
+                                        width="6rem"
+                                        hAlign="Right"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colLotSize}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{path: 'itemTableModel>LotSize', formatter: '.formatter.formatQty'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 21. 생산소요주수 (LEAD_TIME: 생산에 필요한 주 수) -->
+                                    <ui:Column
+                                        width="8rem"
+                                        hAlign="Center"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colLeadTime}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{itemTableModel>LeadTime}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 22. 확정여부 (FIXED_YN: X=확정 / 공백=미확정) -->
+                                    <ui:Column
+                                        width="5rem"
+                                        hAlign="Center"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colFixedYn}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{path: 'itemTableModel>FixedYn', formatter: '.formatter.fixedYnText'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+
+                                    <!-- 23. 생성일자 (ERDAT: 레코드 생성일) -->
+                                    <ui:Column
+                                        width="7rem"
+                                        hAlign="Center"
+                                    >
+                                        <ui:label>
+                                            <Label text="{i18n>colErdat}" />
+                                        </ui:label>
+                                        <ui:template>
+                                            <Text
+                                                text="{path: 'itemTableModel>Erdat', formatter: '.formatter.formatDate'}"
+                                            />
+                                        </ui:template>
+                                    </ui:Column>
+                                </ui:columns>
+                            </ui:Table>
+                        </content>
+                    </IconTabFilter>
+
+                    <!-- ==================== -->
+                    <!-- 탭2: 주차별 복합 차트 -->
+                    <!-- ==================== -->
+                    <IconTabFilter
+                        id="tabChart"
+                        text="{i18n>tab2}"
+                        icon="sap-icon://bar-chart"
+                        key="tabChart"
+                    >
+                        <content>
+                            <VBox
+                                class="sapUiSmallMarginTop sapUiMediumMarginBeginEnd"
+                            >
+                                <!--
+                                    체크박스 영역: 8개 항목 표시/숨김 토글
+                                    chartModel>/visibility 객체로 각 항목 상태 관리
+                                    변경 시 onSeriesToggle 호출 → 차트 데이터 재구성
+                                -->
+                                <HBox
+                                    alignItems="Center"
+                                    wrap="Wrap"
+                                    class="sapUiSmallMarginBottom"
+                                >
+                                    <!-- Bar 계열 체크박스 -->
+                                    <CheckBox
+                                        id="cbFcstQty"
+                                        text="예측수요량"
+                                        selected="{chartModel>/visibility/FcstQty}"
+                                        select=".onSeriesToggle"
+                                        class="sapUiSmallMarginEnd"
+                                    />
+                                    <CheckBox
+                                        id="cbOrderQty"
+                                        text="주문량"
+                                        selected="{chartModel>/visibility/OrderQty}"
+                                        select=".onSeriesToggle"
+                                        class="sapUiSmallMarginEnd"
+                                    />
+                                    <CheckBox
+                                        id="cbMpsQty"
+                                        text="MPS수량"
+                                        selected="{chartModel>/visibility/MpsQty}"
+                                        select=".onSeriesToggle"
+                                        class="sapUiSmallMarginEnd"
+                                    />
+                                    <CheckBox
+                                        id="cbMpsRelQty"
+                                        text="MPS개시량"
+                                        selected="{chartModel>/visibility/MpsRelQty}"
+                                        select=".onSeriesToggle"
+                                        class="sapUiSmallMarginEnd"
+                                    />
+                                    <CheckBox
+                                        id="cbSafetyStockQty"
+                                        text="안전재고량"
+                                        selected="{chartModel>/visibility/SafetyStockQty}"
+                                        select=".onSeriesToggle"
+                                        class="sapUiSmallMarginEnd"
+                                    />
+                                    <!-- Line 계열 체크박스 -->
+                                    <CheckBox
+                                        id="cbProjectedAvailQty"
+                                        text="예상재고량"
+                                        selected="{chartModel>/visibility/ProjectedAvailQty}"
+                                        select=".onSeriesToggle"
+                                        class="sapUiSmallMarginEnd"
+                                    />
+                                    <CheckBox
+                                        id="cbAtpQty"
+                                        text="ATP수량"
+                                        selected="{chartModel>/visibility/AtpQty}"
+                                        select=".onSeriesToggle"
+                                        class="sapUiSmallMarginEnd"
+                                    />
+                                    <CheckBox
+                                        id="cbBaseQty"
+                                        text="기준수요량"
+                                        selected="{chartModel>/visibility/BaseQty}"
+                                        select=".onSeriesToggle"
+                                        class="sapUiSmallMarginEnd"
+                                    />
+                                    <!-- 구분선: 체크박스 영역과 레이블 토글 영역 분리 -->
+                                    <ToolbarSeparator
+                                        class="sapUiSmallMarginBeginEnd"
+                                    />
+
+                                    <!-- 레이블 표시 텍스트 -->
+                                    <Text
+                                        text="레이블"
+                                        class="sapUiSmallMarginEnd"
+                                    />
+
+                                    <!-- Switch: ON=레이블 표시 / OFF=레이블 숨김 -->
+                                    <!--
+                                        state: chartModel>/showLabel 바인딩
+                                        change: onLabelToggle 핸들러 호출
+                                    -->
+                                    <Switch
+                                        id="switchLabel"
+                                        state="{chartModel>/showLabel}"
+                                        change=".onLabelToggle"
+                                    />
+                                </HBox>
+
+                                <!-- 전체 해제 시 안내 메시지 (기본 숨김) -->
+                                <!-- visible은 컨트롤러에서 동적 제어 -->
+                                <VBox
+                                    id="vboxNoChart"
+                                    visible="false"
+                                    height="560px"
+                                    justifyContent="Center"
+                                    alignItems="Center"
+                                >
+                                    <IllustratedMessage
+                                        illustrationType="sapIllus-NoData"
+                                        title="표시할 데이터가 없습니다"
+                                        description="위의 체크박스에서 항목을 선택해주세요."
+                                    />
+                                </VBox>
+
+                                <!--
+                                    초기 vizType: combination (Bar+Line 혼합, 단일 Y축)
+                                    실제 vizType은 _updateChart()에서 체크박스 상태에 따라
+                                    combination / column / line 중 하나로 동적 변경됨
+                                -->
+                                <viz:VizFrame
+                                    id="vizChart"
+                                    vizType="combination"
+                                    height="560px"
+                                    width="100%"
+                                >
+                                    <viz:dataset>
+                                        <vizData:FlattenedDataset
+                                            data="{chartModel>/displayItems}"
+                                        >
+                                            <vizData:dimensions>
+                                                <!-- X축: 주차 레이블 (W01, W02 ...) -->
+                                                <vizData:DimensionDefinition
+                                                    name="주차"
+                                                    value="{WeekLabel}"
+                                                />
+                                            </vizData:dimensions>
+                                            <vizData:measures>
+                                                <!-- Bar 계열 measures -->
+                                                <vizData:MeasureDefinition
+                                                    name="예측수요량"
+                                                    value="{FcstQty}"
+                                                />
+                                                <vizData:MeasureDefinition
+                                                    name="주문량"
+                                                    value="{OrderQty}"
+                                                />
+                                                <vizData:MeasureDefinition
+                                                    name="MPS수량"
+                                                    value="{MpsQty}"
+                                                />
+                                                <vizData:MeasureDefinition
+                                                    name="MPS개시량"
+                                                    value="{MpsRelQty}"
+                                                />
+                                                <vizData:MeasureDefinition
+                                                    name="안전재고량"
+                                                    value="{SafetyStockQty}"
+                                                />
+                                                <!-- Line 계열 measures -->
+                                                <vizData:MeasureDefinition
+                                                    name="예상재고량"
+                                                    value="{ProjectedAvailQty}"
+                                                />
+                                                <vizData:MeasureDefinition
+                                                    name="ATP수량"
+                                                    value="{AtpQty}"
+                                                />
+                                                <!-- 기준수요량: max(FcstQty, OrderQty) → 컨트롤러에서 계산 -->
+                                                <vizData:MeasureDefinition
+                                                    name="기준수요량"
+                                                    value="{BaseQty}"
+                                                />
+                                            </vizData:measures>
+                                        </vizData:FlattenedDataset>
+                                    </viz:dataset>
+
+                                    <!--
+                                        feeds 초기값: categoryAxis + valueAxis 2개만 유지
+                                        - categoryAxis: X축 (주차) — 항상 고정
+                                        - valueAxis:    Y축 초기값 (예측수요량)
+                                        실제 feeds 구성은 _updateChart()에서
+                                        destroyFeeds() 후 체크박스 상태에 맞게 완전 재구성됨
+                                        ※ combination/column/line 모두 valueAxis 단일 Y축만 사용
+                                    -->
+                                    <viz:feeds>
+                                        <!-- X축: 주차 레이블 고정 -->
+                                        <vizFeeds:FeedItem
+                                            id="feedCategoryAxis"
+                                            uid="categoryAxis"
+                                            type="Dimension"
+                                            values="주차"
+                                        />
+                                        <!-- Y축 초기값: 컨트롤러에서 destroyFeeds() 후 동적 재구성 -->
+                                        <vizFeeds:FeedItem
+                                            id="feedValueAxis"
+                                            uid="valueAxis"
+                                            type="Measure"
+                                            values="예측수요량"
+                                        />
+                                    </viz:feeds>
+                                </viz:VizFrame>
+                            </VBox>
+                        </content>
+                    </IconTabFilter>
+                </items>
+            </IconTabBar>
+        </content>
     </Page>
 </mvc:View>

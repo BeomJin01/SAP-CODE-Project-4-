@@ -13,28 +13,57 @@ sap.ui.define([], function () {
             };
             return oMap[sStatus] || sStatus;
         },
+        // 실행상태 색상용
+        statusTextState: function (sStatus) {
+            var oMap = {
+                "EC": "Success",  // 초록 (실행완료)
+                "EF": "Error",    // 빨강 (실행실패)
+                "CN": "Error"     // 빨강 (실행취소)
+            };
+            return oMap[sStatus] || "None";
+        },
+
+        // View1 상태상세 텍스트 변환
+        // EC → 확정포함, EF/CN → 계획취소
+        headerToItemStatusText: function (sStatus, sEarliestWaDate) {
+            if (sStatus === "EC") {
+                return sEarliestWaDate ? "승인대기" : "확정포함";
+            }
+            var oMap = {
+                "EF": "계획취소",
+                "CN": "계획취소"
+            };
+            return oMap[sStatus] || "";
+        },
 
 
         // MPS 헤더 실행상태 → ObjectStatus state 변환
         // sap.ui.core.ValueState: Success/Error/Warning/None
-        statusState: function (sStatus) {
+        statusState: function (sStatus, sEarliestWaDate) {
+            if (sStatus === "EC") {
+                // EarliestWaDate가 있으면 승인대기 아이템 존재 → 노란색
+                return sEarliestWaDate ? "Warning" : "Success";
+            }
             var oMap = {
-                "EC": "Information",  // 파란색 (실행완료)
-                "EF": "Error",        // 빨간색 (실행실패)
-                "CN": "None"          // 회색   (실행취소)
+                "EF": "Error",   // 빨간색
+                "CN": "Error"    // 빨간색
             };
             return oMap[sStatus] || "None";
         },
 
 
         // MPS 헤더 실행상태 → LED 색상 변환 (sap.m.ObjectStatus icon용)
-        statusIcon: function (sStatus) {
+        statusIcon: function (sStatus, sEarliestWaDate) {
+            if (sStatus === "EC") {
+                return sEarliestWaDate
+                    ? "sap-icon://status-critical"   // 노란 (승인대기)
+                    : "sap-icon://status-positive";  // 초록 (확정포함)
+            }
             var oMap = {
-                "EC": "sap-icon://circle-task-2",  // 파랑
-                "EF": "sap-icon://error",           // 빨강
-                "CN": "sap-icon://sys-minus"        // 회색
+                "EF": "sap-icon://status-negative",  // 빨강 (실행실패)
+                "CN": "sap-icon://status-negative"   // 빨강 (실행취소)
             };
-            return oMap[sStatus] || "sap-icon://sys-minus";
+            return oMap[sStatus] || "sap-icon://status-negative";
         },
 
 
@@ -45,7 +74,7 @@ sap.ui.define([], function () {
                 "WA": "승인대기",
                 "AP": "승인완료",
                 "CN": "계획취소",
-                "RJ": "반려"
+                "RJ": "계획반려"
             };
             return oMap[sStatus] || sStatus;
         },
@@ -61,6 +90,18 @@ sap.ui.define([], function () {
                 "RJ": "Error"      // 빨강 (반려)
             };
             return oMap[sStatus] || "None";
+        },
+
+        // MPS 아이템 상태 → LED 아이콘 변환
+        // AP=초록, WA=노랑, CN/RJ=빨강
+        itemStatusIcon: function (sStatus) {
+            var oMap = {
+                "AP": "sap-icon://status-positive",  // 초록 (승인완료)
+                "WA": "sap-icon://status-critical",  // 노란 (승인대기)
+                "CN": "sap-icon://status-negative",  // 빨강 (계획취소)
+                "RJ": "sap-icon://status-negative"   // 빨강 (반려)
+            };
+            return oMap[sStatus] || "sap-icon://sys-minus";
         },
 
 
@@ -87,6 +128,18 @@ sap.ui.define([], function () {
         formatDate: function (oDate) {
             if (!oDate) {
                 return "";
+            }
+            var oDateFormat = sap.ui.core.format.DateFormat.getDateInstance({
+                pattern: "yyyy.MM.dd"
+            });
+            return oDateFormat.format(oDate);
+        },
+
+        // 최초 승인대기일 전용 formatter
+        // 날짜 없으면 '대기없음', 있으면 yyyy.MM.dd 포맷
+        formatEarliestWaDate: function (oDate) {
+            if (!oDate) {
+                return "대기없음";
             }
             var oDateFormat = sap.ui.core.format.DateFormat.getDateInstance({
                 pattern: "yyyy.MM.dd"
