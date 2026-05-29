@@ -47,6 +47,7 @@ sap.ui.define([
             // 라우터 RouteDetail 패턴 매칭 시 _onRouteMatched 호출
             const oRouter = this.getOwnerComponent().getRouter();
             oRouter.getRoute("RouteDetail").attachPatternMatched(this._onRouteMatched, this);
+
         },
 
         _onRouteMatched(oEvent) {
@@ -62,6 +63,9 @@ sap.ui.define([
             this.getView().getModel("itemTableModel").setProperty("/items", []);
             this.getView().getModel("chartModel").setProperty("/items", []);
             this.getView().byId("txtItemCount").setText("MPS 계획 아이템: 0건");
+
+            // 탭 항상 첫 번째(결과상세)로 초기화
+            this.getView().byId("detailTabBar").setSelectedKey("tabResult");
 
             // 헤더 + 아이템 로드
             this._loadHeader(sMpsRunId);
@@ -382,13 +386,12 @@ sap.ui.define([
                     title: { visible: true, text: "수량" }
                 },
                 // valueAxis2 완전 제거: combination은 단일 Y축이라 불필요
-                categoryAxis: {
-                    title: { visible: false }
-                },
+                categoryAxis: { title: { visible: false } },
                 interaction: {
                     selectability: { mode: "NONE" }
                 }
             });
+
         },
 
         // -------------------------------------------------------

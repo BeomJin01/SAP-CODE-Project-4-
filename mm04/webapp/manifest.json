@@ -107,13 +107,6 @@
           "target": [
             "TargetDetail"
           ]
-        },
-        {
-          "name": "RouteDashboard",
-          "pattern": "Dashboard",
-          "target": [
-            "TargetDashboard"
-          ]
         }
       ],
       "targets": {
@@ -124,10 +117,6 @@
         "TargetDetail": {
           "id": "Detail",
           "name": "Detail"
-        },
-        "TargetDashboard": {
-          "id": "Dashboard",
-          "name": "Dashboard"
         }
       }
     },

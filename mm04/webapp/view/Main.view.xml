@@ -4,6 +4,10 @@
     xmlns="sap.m"
     xmlns:l="sap.ui.layout"
     xmlns:f="sap.ui.layout.form"
+    xmlns:core="sap.ui.core"
+    xmlns:viz="sap.viz.ui5.controls"
+    xmlns:vizData="sap.viz.ui5.data"
+    xmlns:vizFeeds="sap.viz.ui5.controls.common.feeds"
     displayBlock="true"
 >
     <!-- View1: MPS 실행 목록 조회 화면 -->
@@ -11,16 +15,6 @@
         id="mainPage"
         title="{i18n>mainTitle}"
     >
-        <!-- 헤더 우측: 대시보드 이동 버튼 -->
-        <headerContent>
-            <Button
-                id="btnDashboard"
-                icon="sap-icon://horizontal-bar-chart"
-                text="{i18n>btnDashboard}"
-                press=".onNavToDashboard"
-            />
-        </headerContent>
-
         <content>
             <!-- 조회 조건 패널 -->
             <Panel
@@ -245,9 +239,9 @@
 
                             <!-- ===== 3열: 계획시작일 / 계획종료일 / 조회·초기화 ===== -->
                             <!--
-            width="100%" + HBox width="100%" + justifyContent="End"
-            → 조회/초기화 버튼이 3열 오른쪽 끝에 고정
-        -->
+                                width="100%" + HBox width="100%" + justifyContent="End"
+                                → 조회/초기화 버튼이 3열 오른쪽 끝에 고정
+                            -->
                             <VBox
                                 width="100%"
                                 class="sapUiSmallMarginTop sapUiSmallMarginBottom"
@@ -298,9 +292,9 @@
 
                                 <!-- Row3: 조회/초기화 버튼 → 3열 오른쪽 끝 고정 -->
                                 <!--
-                VBox width="100%" → HBox width="100%" → justifyContent="End"
-                세 조건이 모두 충족되어야 버튼이 오른쪽 끝에 위치
-            -->
+                                    VBox width="100%" → HBox width="100%" → justifyContent="End"
+                                    세 조건이 모두 충족되어야 버튼이 오른쪽 끝에 위치
+                                -->
                                 <HBox
                                     justifyContent="End"
                                     alignItems="Center"
@@ -328,198 +322,561 @@
                 </content>
             </Panel>
 
-            <!-- 결과 테이블 영역 -->
-            <VBox class="sapUiSmallMarginTop">
-                <!-- 테이블 상단: 건수(좌) + 새로고침(우) -->
-                <HBox
-                    justifyContent="SpaceBetween"
-                    alignItems="Center"
-                    class="sapUiSmallMarginBeginEnd"
-                >
-                    <!-- SAP GUI MPS 프로그램과 동일한 형식 -->
-                    <Text
-                        id="txtResultCount"
-                        text="MPS 실행 목록: 0건"
-                    />
-                    <Button
-                        id="btnRefresh"
-                        icon="sap-icon://refresh"
-                        text="{i18n>btnRefresh}"
-                        press=".onRefresh"
-                    />
-                </HBox>
+            <!-- ========================
+                    탭 영역: 실행목록 / 대시보드
+                    조회 조건 패널은 탭 밖에 위치하여 두 탭 공통으로 사용
+                ======================== -->
+            <IconTabBar
+                id="mainTabBar"
+                class="sapUiSmallMarginTop"
+                select=".onMainTabSelect"
+            >
+                <items>
+                    <!-- ========================= -->
+                    <!-- 탭1: 실행목록              -->
+                    <!-- 기존 테이블 영역 그대로 이동 -->
+                    <!-- ========================= -->
+                    <IconTabFilter
+                        id="tabMainList"
+                        text="{i18n>tab1Main}"
+                        icon="sap-icon://table-view"
+                        key="tabMainList"
+                    >
+                        <content>
+                            <!-- 테이블 상단: 건수(좌) + 새로고침(우) -->
+                            <HBox
+                                justifyContent="SpaceBetween"
+                                alignItems="Center"
+                                class="sapUiSmallMarginBeginEnd sapUiSmallMarginTop"
+                            >
+                                <Text
+                                    id="txtResultCount"
+                                    text="MPS 실행 목록: 0건"
+                                />
+                                <Button
+                                    id="btnRefresh"
+                                    icon="sap-icon://refresh"
+                                    text="{i18n>btnRefresh}"
+                                    press=".onRefresh"
+                                />
+                            </HBox>
 
-                <!--
-                    결과 테이블
-                    width 미지정 → 컬럼 너비 자동 조절
-                    growing: 50건씩 추가 로드
-                    sticky: 스크롤 시 컬럼 헤더 고정
-                -->
-                <Table
-                    id="mainTable"
-                    items="{mainTableModel>/items}"
-                    noDataText="{i18n>msgNoData}"
-                    growing="true"
-                    growingThreshold="50"
-                    sticky="ColumnHeaders"
-                >
-                    <columns>
-                        <!-- 상태: 헤더 STATUS 기준 LED -->
-                        <!-- EC=파랑(Information), EF=빨강(Error), CN=회색(None) -->
-                        <Column hAlign="Center">
-                            <Text text="{i18n>colStatus}" />
-                        </Column>
+                            <!-- 결과 테이블
+                                growing: 50건씩 추가 로드
+                                sticky: 스크롤 시 컬럼 헤더 고정 -->
+                            <Table
+                                id="mainTable"
+                                items="{mainTableModel>/items}"
+                                noDataText="{i18n>msgNoData}"
+                                growing="true"
+                                growingThreshold="50"
+                                sticky="ColumnHeaders"
+                            >
+                                <columns>
+                                    <!-- 상태 LED: EC=초록/EF=빨강/CN=회색 -->
+                                    <Column hAlign="Center">
+                                        <Text text="{i18n>colStatus}" />
+                                    </Column>
+                                    <!-- 상태상세: 확정포함/승인대기/계획취소 -->
+                                    <Column>
+                                        <Text text="{i18n>colStatusDetail}" />
+                                    </Column>
+                                    <!-- 실행상태: 실행완료/실행실패/실행취소 -->
+                                    <Column>
+                                        <Text text="{i18n>colStatusText}" />
+                                    </Column>
+                                    <!-- MPS 실행 ID: 클릭 시 Detail 화면 이동 -->
+                                    <Column>
+                                        <Text text="{i18n>colMpsRunId}" />
+                                    </Column>
+                                    <Column hAlign="Center">
+                                        <Text text="{i18n>colPlanStartDate}" />
+                                    </Column>
+                                    <Column hAlign="Center">
+                                        <Text text="{i18n>colPlanEndDate}" />
+                                    </Column>
+                                    <Column>
+                                        <Text text="{i18n>colWerks}" />
+                                    </Column>
+                                    <Column>
+                                        <Text text="{i18n>colPlantName}" />
+                                    </Column>
+                                    <Column>
+                                        <Text text="{i18n>colMatnr}" />
+                                    </Column>
+                                    <Column>
+                                        <Text text="{i18n>colMaktx}" />
+                                    </Column>
+                                    <Column hAlign="Center">
+                                        <Text text="{i18n>colRunDate}" />
+                                    </Column>
+                                    <Column>
+                                        <Text text="{i18n>colErnam}" />
+                                    </Column>
+                                    <!-- 최초 승인대기일: WA 아이템 없으면 빈값 -->
+                                    <Column hAlign="Center">
+                                        <Text text="{i18n>colEarliestWaDate}" />
+                                    </Column>
+                                    <Column hAlign="Center">
+                                        <Text text="{i18n>colErdat}" />
+                                    </Column>
+                                </columns>
 
-                        <!-- 상태상세: 헤더 STATUS 기준 텍스트 -->
-                        <!-- EC=확정포함(초록), EF/CN=계획취소(빨강) -->
-                        <Column>
-                            <Text text="{i18n>colStatusDetail}" />
-                        </Column>
-
-                        <!-- 실행상태: 헤더 STATUS 텍스트 -->
-                        <!-- 실행완료/실행실패/실행취소 -->
-                        <Column>
-                            <Text text="{i18n>colStatusText}" />
-                        </Column>
-
-                        <!-- MPS 실행 ID: 클릭 시 Detail 화면 이동 -->
-                        <Column>
-                            <Text text="{i18n>colMpsRunId}" />
-                        </Column>
-
-                        <Column hAlign="Center">
-                            <Text text="{i18n>colPlanStartDate}" />
-                        </Column>
-
-                        <Column hAlign="Center">
-                            <Text text="{i18n>colPlanEndDate}" />
-                        </Column>
-
-                        <Column>
-                            <Text text="{i18n>colWerks}" />
-                        </Column>
-
-                        <Column>
-                            <Text text="{i18n>colPlantName}" />
-                        </Column>
-
-                        <Column>
-                            <Text text="{i18n>colMatnr}" />
-                        </Column>
-
-                        <Column>
-                            <Text text="{i18n>colMaktx}" />
-                        </Column>
-
-                        <Column hAlign="Center">
-                            <Text text="{i18n>colRunDate}" />
-                        </Column>
-
-                        <Column>
-                            <Text text="{i18n>colErnam}" />
-                        </Column>
-
-                        <!-- 최초 승인대기일: WA 아이템 최소 주차일 -->
-                        <!-- WA 아이템 없으면 빈값 표시 -->
-                        <Column hAlign="Center">
-                            <Text text="{i18n>colEarliestWaDate}" />
-                        </Column>
-
-                        <Column hAlign="Center">
-                            <Text text="{i18n>colErdat}" />
-                        </Column>
-                    </columns>
-
-                    <items>
-                        <!-- 행 클릭 시 onRowPress → RouteDetail navTo -->
-                        <ColumnListItem
-                            type="Navigation"
-                            press=".onRowPress"
-                        >
-                            <cells>
-                                <!-- 상태 LED -->
-                                <!-- statusIcon: EC=circle-task-2/EF=error/CN=sys-minus -->
-                                <!-- statusState: EC=Information/EF=Error/CN=None -->
-                                <ObjectStatus
-                                    icon="{
+                                <items>
+                                    <!-- 행 클릭 시 onRowPress → RouteDetail navTo -->
+                                    <ColumnListItem
+                                        type="Navigation"
+                                        press=".onRowPress"
+                                    >
+                                        <cells>
+                                            <!-- 상태 LED 아이콘 -->
+                                            <ObjectStatus
+                                                icon="{
                                         parts: [
                                             {path: 'mainTableModel>Status'},
                                             {path: 'mainTableModel>EarliestWaDate'}
                                         ],
                                         formatter: '.formatter.statusIcon'
                                     }"
-                                    state="{
+                                                state="{
                                         parts: [
                                             {path: 'mainTableModel>Status'},
                                             {path: 'mainTableModel>EarliestWaDate'}
                                         ],
                                         formatter: '.formatter.statusState'
                                     }"
-                                />
-
-                                <!-- 상태상세 -->
-                                <!-- headerToItemStatusText: EC=확정포함/EF,CN=계획취소 -->
-                                <!-- statusState 재사용: EC=Information/EF=Error/CN=None -->
-                                <ObjectStatus
-                                    text="{
+                                            />
+                                            <!-- 상태상세 텍스트 -->
+                                            <ObjectStatus
+                                                text="{
                                         parts: [
                                             {path: 'mainTableModel>Status'},
                                             {path: 'mainTableModel>EarliestWaDate'}
                                         ],
                                         formatter: '.formatter.headerToItemStatusText'
                                     }"
-                                    state="{
+                                                state="{
                                         parts: [
                                             {path: 'mainTableModel>Status'},
                                             {path: 'mainTableModel>EarliestWaDate'}
                                         ],
                                         formatter: '.formatter.statusState'
-                                }"
-                                />
+                                    }"
+                                            />
+                                            <!-- 실행상태 텍스트 -->
+                                            <ObjectStatus
+                                                text="{path: 'mainTableModel>Status', formatter: '.formatter.statusText'}"
+                                                state="{path: 'mainTableModel>Status', formatter: '.formatter.statusTextState'}"
+                                            />
+                                            <!-- MPS 실행 ID: Link 클릭 시 onRowPress 호출 -->
+                                            <Link
+                                                text="{mainTableModel>MpsRunId}"
+                                                press=".onRowPress"
+                                                wrapping="true"
+                                            />
+                                            <!-- 날짜: yyyy.MM.dd 포맷 -->
+                                            <Text
+                                                text="{path: 'mainTableModel>PlanStartDate', formatter: '.formatter.formatDate'}"
+                                            />
+                                            <Text
+                                                text="{path: 'mainTableModel>PlanEndDate', formatter: '.formatter.formatDate'}"
+                                            />
+                                            <Text
+                                                text="{mainTableModel>Werks}"
+                                            />
+                                            <Text
+                                                text="{mainTableModel>PlantName}"
+                                            />
+                                            <Text
+                                                text="{mainTableModel>Matnr}"
+                                            />
+                                            <Text
+                                                text="{mainTableModel>Maktx}"
+                                            />
+                                            <Text
+                                                text="{path: 'mainTableModel>RunDate', formatter: '.formatter.formatDate'}"
+                                            />
+                                            <Text
+                                                text="{mainTableModel>Ernam}"
+                                            />
+                                            <!-- EarliestWaDate: null이면 빈값 표시 -->
+                                            <Text
+                                                text="{path: 'mainTableModel>EarliestWaDate', formatter: '.formatter.formatEarliestWaDate'}"
+                                            />
+                                            <Text
+                                                text="{path: 'mainTableModel>Erdat', formatter: '.formatter.formatDate'}"
+                                            />
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </content>
+                    </IconTabFilter>
 
-                                <!-- 실행상태 텍스트: statusText formatter -->
-                                <ObjectStatus
-                                    text="{path: 'mainTableModel>Status', formatter: '.formatter.statusText'}"
-                                    state="{path: 'mainTableModel>Status', formatter: '.formatter.statusTextState'}"
+                    <!-- ========================== -->
+                    <!-- 탭2: 대시보드               -->
+                    <!-- 조회 결과 기반 차트 4종 표시 -->
+                    <!-- ========================== -->
+                    <IconTabFilter
+                        id="tabMainDashboard"
+                        text="{i18n>tab2Main}"
+                        icon="sap-icon://bar-chart"
+                        key="tabMainDashboard"
+                    >
+                        <content>
+                            <!-- 빈 상태 안내 영역
+                                조회 전 또는 데이터 없을 때 IllustratedMessage 표시
+                                컨트롤러에서 visible 동적 제어
+                                조회 전: visible=true (기본값)
+                                조회 후 데이터 있음: visible=false
+                                조회 후 데이터 없음: visible=true -->
+                            <VBox
+                                id="vboxDashNoData"
+                                visible="true"
+                                height="400px"
+                                justifyContent="Center"
+                                alignItems="Center"
+                            >
+                                <IllustratedMessage
+                                    illustrationType="sapIllus-NoData"
+                                    title="{i18n>dashNoDataTitle}"
+                                    description="{i18n>dashNoDataDesc}"
                                 />
+                            </VBox>
 
-                                <!-- MPS 실행 ID: Link 클릭 시 onRowPress 호출 -->
-                                <Link
-                                    text="{mainTableModel>MpsRunId}"
-                                    press=".onRowPress"
-                                    wrapping="true"
-                                />
+                            <!-- 대시보드 차트 영역
+                                조회 후 데이터 있을 때만 표시
+                                컨트롤러에서 visible 동적 제어
+                                조회 전: visible=false (기본값)
+                                조회 후 데이터 있음: visible=true -->
+                            <VBox
+                                id="vboxDashboard"
+                                visible="false"
+                                class="sapUiSmallMarginTop sapUiSmallMarginBeginEnd"
+                            >
+                                <!-- 2x2 그리드 레이아웃 -->
+                                <l:Grid
+                                    hSpacing="1"
+                                    vSpacing="1"
+                                    width="100%"
+                                >
+                                    <l:content>
+                                        <!-- ===========================
+                                            차트1: MPS 실행 현황
+                                            타입: Donut
+                                            데이터: EC/EF/CN 상태별 건수
+                                            바인딩: dashModel>/statusData
+                                        =========================== -->
+                                        <VBox class="sapUiSmallMarginBottom">
+                                            <layoutData>
+                                                <l:GridData
+                                                    span="XL6 L6 M12 S12"
+                                                />
+                                            </layoutData>
+                                            <Title
+                                                text="{i18n>dashChartStatus}"
+                                                class="sapUiSmallMarginBottom"
+                                            />
+                                            <viz:VizFrame
+                                                id="vizDashStatus"
+                                                vizType="donut"
+                                                height="300px"
+                                                width="100%"
+                                            >
+                                                <viz:dataset>
+                                                    <vizData:FlattenedDataset
+                                                        data="{dashModel>/statusData}"
+                                                    >
+                                                        <vizData:dimensions>
+                                                            <!-- 상태 텍스트: 실행완료/실행실패/실행취소 -->
+                                                            <vizData:DimensionDefinition
+                                                                name="상태"
+                                                                value="{StatusText}"
+                                                            />
+                                                        </vizData:dimensions>
+                                                        <vizData:measures>
+                                                            <!-- 상태별 건수 -->
+                                                            <vizData:MeasureDefinition
+                                                                name="건수"
+                                                                value="{Count}"
+                                                            />
+                                                        </vizData:measures>
+                                                    </vizData:FlattenedDataset>
+                                                </viz:dataset>
+                                                <viz:feeds>
+                                                    <!-- Donut: color=범례색상(Dimension), size=크기(Measure) -->
+                                                    <vizFeeds:FeedItem
+                                                        uid="color"
+                                                        type="Dimension"
+                                                        values="상태"
+                                                    />
+                                                    <vizFeeds:FeedItem
+                                                        uid="size"
+                                                        type="Measure"
+                                                        values="건수"
+                                                    />
+                                                </viz:feeds>
+                                            </viz:VizFrame>
+                                        </VBox>
 
-                                <!-- 날짜: formatDate formatter → yyyy.MM.dd -->
-                                <Text
-                                    text="{path: 'mainTableModel>PlanStartDate', formatter: '.formatter.formatDate'}"
-                                />
-                                <Text
-                                    text="{path: 'mainTableModel>PlanEndDate', formatter: '.formatter.formatDate'}"
-                                />
+                                        <!-- 차트2: MPS 결과 현황 (Stacked Bar)
+                                            자재별로 AP/WA/CN/RJ 상태 아이템 건수를 누적 막대로 표시
+                                            어떤 자재에 승인 지연/취소가 많은지 한눈에 파악 가능
+                                            바인딩: dashModel>/statusMatnrData -->
+                                        <VBox class="sapUiSmallMarginBottom">
+                                            <layoutData>
+                                                <l:GridData
+                                                    span="XL6 L6 M12 S12"
+                                                />
+                                            </layoutData>
+                                            <Title
+                                                text="{i18n>dashChartStatusMatnr}"
+                                                class="sapUiSmallMarginBottom"
+                                            />
 
-                                <Text text="{mainTableModel>Werks}" />
-                                <Text text="{mainTableModel>PlantName}" />
-                                <Text text="{mainTableModel>Matnr}" />
-                                <Text text="{mainTableModel>Maktx}" />
+                                            <ScrollContainer
+                                                id="scrollChart2"
+                                                vertical="true"
+                                                horizontal="false"
+                                                width="100%"
+                                            >
+                                                <viz:VizFrame
+                                                    id="vizDashStatusMatnr"
+                                                    vizType="stacked_bar"
+                                                    height="300px"
+                                                    width="100%"
+                                                >
+                                                    <viz:dataset>
+                                                        <vizData:FlattenedDataset
+                                                            data="{dashModel>/statusMatnrData}"
+                                                        >
+                                                            <vizData:dimensions>
+                                                                <!-- Y축: 자재번호 -->
+                                                                <vizData:DimensionDefinition
+                                                                    name="자재"
+                                                                    value="{Matnr}"
+                                                                />
+                                                            </vizData:dimensions>
+                                                            <vizData:measures>
+                                                                <!-- 누적 막대: 승인완료/승인대기/계획취소/계획반려 건수 -->
+                                                                <vizData:MeasureDefinition
+                                                                    name="승인완료"
+                                                                    value="{ApCount}"
+                                                                />
+                                                                <vizData:MeasureDefinition
+                                                                    name="승인대기"
+                                                                    value="{WaCount}"
+                                                                />
+                                                                <vizData:MeasureDefinition
+                                                                    name="계획취소"
+                                                                    value="{CnCount}"
+                                                                />
+                                                                <vizData:MeasureDefinition
+                                                                    name="계획반려"
+                                                                    value="{RjCount}"
+                                                                />
+                                                            </vizData:measures>
+                                                        </vizData:FlattenedDataset>
+                                                    </viz:dataset>
+                                                    <viz:feeds>
+                                                        <!-- Stacked Bar: categoryAxis=Y축(자재), valueAxis=X축(건수 합산) -->
+                                                        <vizFeeds:FeedItem
+                                                            uid="categoryAxis"
+                                                            type="Dimension"
+                                                            values="자재"
+                                                        />
+                                                        <vizFeeds:FeedItem
+                                                            uid="valueAxis"
+                                                            type="Measure"
+                                                            values="승인완료"
+                                                        />
+                                                        <vizFeeds:FeedItem
+                                                            uid="valueAxis"
+                                                            type="Measure"
+                                                            values="승인대기"
+                                                        />
+                                                        <vizFeeds:FeedItem
+                                                            uid="valueAxis"
+                                                            type="Measure"
+                                                            values="계획취소"
+                                                        />
+                                                        <vizFeeds:FeedItem
+                                                            uid="valueAxis"
+                                                            type="Measure"
+                                                            values="계획반려"
+                                                        />
+                                                    </viz:feeds>
+                                                </viz:VizFrame>
+                                            </ScrollContainer>
+                                        </VBox>
 
-                                <Text
-                                    text="{path: 'mainTableModel>RunDate', formatter: '.formatter.formatDate'}"
-                                />
-                                <Text text="{mainTableModel>Ernam}" />
+                                        <!-- 차트3: 예측수요 및 수주 비교 (Column) -->
+                                        <VBox class="sapUiSmallMarginBottom">
+                                            <layoutData>
+                                                <!-- XL12: 가로 전체 너비 사용 (기존 XL6에서 변경) -->
+                                                <l:GridData
+                                                    span="XL12 L12 M12 S12"
+                                                />
+                                            </layoutData>
 
-                                <!-- EarliestWaDate: null이면 빈값 표시 -->
-                                <Text
-                                    text="{path: 'mainTableModel>EarliestWaDate', formatter: '.formatter.formatEarliestWaDate'}"
-                                />
-                                <Text
-                                    text="{path: 'mainTableModel>Erdat', formatter: '.formatter.formatDate'}"
-                                />
-                            </cells>
-                        </ColumnListItem>
-                    </items>
-                </Table>
-            </VBox>
+                                            <!-- 제목 + 주차별/월별 RadioButton -->
+                                            <HBox
+                                                id="hboxFcstRadio"
+                                                alignItems="Center"
+                                                class="sapUiSmallMarginBottom"
+                                                wrap="Wrap"
+                                            >
+                                                <Title
+                                                    text="{i18n>dashChartFcstOrder}"
+                                                />
+                                                <ToolbarSeparator
+                                                    class="sapUiSmallMarginBeginEnd"
+                                                />
+                                                <!-- 주차별 버튼: 기본 선택 -->
+                                                <RadioButton
+                                                    id="rbFcstWeekly"
+                                                    text="주차별"
+                                                    selected="true"
+                                                    select=".onFcstViewToggle"
+                                                    class="sapUiSmallMarginEnd"
+                                                />
+                                                <!-- 월별 버튼 -->
+                                                <RadioButton
+                                                    id="rbFcstMonthly"
+                                                    text="월별"
+                                                    selected="false"
+                                                    select=".onFcstViewToggle"
+                                                    class="sapUiSmallMarginEnd"
+                                                />
+                                            </HBox>
+
+                                            <!-- 20주 초과 시 안내 메시지 (기본 hidden, 컨트롤러에서 visible 제어) -->
+                                            <!-- [변경] 기준: 12주 초과 → 20주 초과로 변경 -->
+                                            <VBox
+                                                id="vboxFcstOverLimit"
+                                                visible="false"
+                                                height="300px"
+                                                justifyContent="Center"
+                                                alignItems="Center"
+                                                class="sapUiSmallMarginBottom fcstOverLimitBox"
+                                            >
+                                                <IllustratedMessage
+                                                    illustrationType="sapIllus-NoData"
+                                                    title="월별 보기만 지원합니다"
+                                                    description="20주차를 초과하는 데이터는 월별 보기만 지원합니다."
+                                                />
+                                            </VBox>
+
+                                            <!-- 예측수요 vs 수주 Column 차트 -->
+                                            <viz:Popover id="vizPopoverFcst" />
+                                            <viz:VizFrame
+                                                id="vizDashFcstOrder"
+                                                vizType="column"
+                                                height="300px"
+                                                width="100%"
+                                            >
+                                                <viz:dataset>
+                                                    <vizData:FlattenedDataset
+                                                        data="{dashModel>/fcstOrderData}"
+                                                    >
+                                                        <vizData:dimensions>
+                                                            <vizData:DimensionDefinition
+                                                                name="기간"
+                                                                value="{PeriodLabel}"
+                                                            />
+                                                        </vizData:dimensions>
+                                                        <vizData:measures>
+                                                            <vizData:MeasureDefinition
+                                                                name="예측수요량"
+                                                                value="{TotalFcstQty}"
+                                                            />
+                                                            <vizData:MeasureDefinition
+                                                                name="주문량"
+                                                                value="{TotalOrderQty}"
+                                                            />
+                                                        </vizData:measures>
+                                                    </vizData:FlattenedDataset>
+                                                </viz:dataset>
+                                                <viz:feeds>
+                                                    <vizFeeds:FeedItem
+                                                        uid="categoryAxis"
+                                                        type="Dimension"
+                                                        values="기간"
+                                                    />
+                                                    <vizFeeds:FeedItem
+                                                        uid="valueAxis"
+                                                        type="Measure"
+                                                        values="예측수요량"
+                                                    />
+                                                    <vizFeeds:FeedItem
+                                                        uid="valueAxis"
+                                                        type="Measure"
+                                                        values="주문량"
+                                                    />
+                                                </viz:feeds>
+                                            </viz:VizFrame>
+                                        </VBox>
+
+                                        <!-- 차트4: 자재별 MPS 개시량 합계 (Bar) -->
+                                        <VBox class="sapUiSmallMarginBottom">
+                                            <layoutData>
+                                                <!-- XL12: 가로 전체 너비 -->
+                                                <l:GridData
+                                                    span="XL12 L12 M12 S12"
+                                                />
+                                            </layoutData>
+
+                                            <Title
+                                                text="{i18n>dashChartMatnr}"
+                                                class="sapUiSmallMarginBottom"
+                                            />
+
+                                            <!-- [변경] ScrollContainer 제거 → VizFrame 높이를 컨트롤러에서 동적 세팅 -->
+                                            <viz:VizFrame
+                                                id="vizDashMatnr"
+                                                vizType="bar"
+                                                height="300px"
+                                                width="100%"
+                                            >
+                                                <viz:dataset>
+                                                    <vizData:FlattenedDataset
+                                                        data="{dashModel>/matnrData}"
+                                                    >
+                                                        <vizData:dimensions>
+                                                            <vizData:DimensionDefinition
+                                                                name="자재"
+                                                                value="{Matnr}"
+                                                            />
+                                                        </vizData:dimensions>
+                                                        <vizData:measures>
+                                                            <vizData:MeasureDefinition
+                                                                name="MPS개시량합계"
+                                                                value="{TotalRelQty}"
+                                                            />
+                                                        </vizData:measures>
+                                                    </vizData:FlattenedDataset>
+                                                </viz:dataset>
+                                                <viz:feeds>
+                                                    <vizFeeds:FeedItem
+                                                        uid="categoryAxis"
+                                                        type="Dimension"
+                                                        values="자재"
+                                                    />
+                                                    <vizFeeds:FeedItem
+                                                        uid="valueAxis"
+                                                        type="Measure"
+                                                        values="MPS개시량합계"
+                                                    />
+                                                </viz:feeds>
+                                            </viz:VizFrame>
+                                        </VBox>
+                                    </l:content>
+                                </l:Grid>
+                            </VBox>
+                        </content>
+                    </IconTabFilter>
+                </items>
+            </IconTabBar>
         </content>
     </Page>
 </mvc:View>
