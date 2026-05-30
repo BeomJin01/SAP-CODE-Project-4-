@@ -56,6 +56,7 @@ sap.ui.define([
             const sRunIdFrom = oData.searchRunIdFrom.trim();
             const sRunIdTo = oData.searchRunIdTo.trim();
             const sStatus = oData.searchStatus;
+            const sStatusDetail = oData.searchStatusDetail;
 
             // DateRangeSelection 값 추출
             const oDrsStart = oView.byId("drsStartDate");
@@ -65,56 +66,236 @@ sap.ui.define([
             const oEndFrom = oDrsEnd.getDateValue();
             const oEndTo = oDrsEnd.getSecondDateValue();
 
-            // 유효성 검증 1: 최소 1개 조건 필수
-            if (!sWerks && !sMatnr && !sRunIdFrom && !oStartFrom && !oEndFrom && !sStatus) {
-                MessageBox.error(this._i18n("msgNoCondition"));
+            // -------------------------------------------------------
+            // 동기 유효성 검증 (순서대로 체크, 실패 시 즉시 return)
+            // -------------------------------------------------------
+
+            // 검증 1: MPS 실행 ID — To만 입력 시 에러
+            // From 없이 To만 있으면 범위 조회 불가
+            if (!sRunIdFrom && sRunIdTo) {
+                MessageBox.error(this._i18n("msgRunIdToOnly"));
                 return;
             }
 
-            // 유효성 검증 2: MPS 실행 ID From > To 역전 체크
+            // 검증 2: MPS 실행 ID — From > To 역전 체크
             if (sRunIdFrom && sRunIdTo && sRunIdFrom > sRunIdTo) {
                 MessageBox.error(this._i18n("msgRunIdFromTo"));
                 return;
             }
 
-            // 유효성 검증 3: 계획 시작일 역전 체크
+            // 검증 3: 날짜 범위 체크 (설립일 이전 / 10년 이후)
+            // 기준일: 설립일 1995.06.24 / 상한: 오늘 + 10년
+            const oMinDate = new Date(1995, 5, 24);  // 1995.06.24 (월은 0부터 시작)
+            const oMaxDate = new Date();
+            oMaxDate.setFullYear(oMaxDate.getFullYear() + 10);  // 오늘 + 10년
+
+            // 날짜 4개 필드(계획시작일 From/To, 계획종료일 From/To) 순서대로 체크
+            const aDateFields = [oStartFrom, oStartTo, oEndFrom, oEndTo];
+            for (const oDate of aDateFields) {
+                if (!oDate) continue;  // 입력 안 된 필드는 건너뜀
+                if (oDate < oMinDate) {
+                    MessageBox.error(this._i18n("msgDateTooEarly"));
+                    return;
+                }
+                if (oDate > oMaxDate) {
+                    MessageBox.error(this._i18n("msgDateTooLate"));
+                    return;
+                }
+            }
+
+            // 검증 4: 계획 시작일 — From > To 역전 체크
             if (oStartFrom && oStartTo && oStartFrom > oStartTo) {
                 MessageBox.error(this._i18n("msgDateFromTo"));
                 return;
             }
 
-            // 유효성 검증 4: 계획 종료일 역전 체크
+            // 검증 5: 계획 종료일 — From > To 역전 체크
             if (oEndFrom && oEndTo && oEndFrom > oEndTo) {
                 MessageBox.error(this._i18n("msgDateFromTo"));
                 return;
             }
 
-            // OData 필터 구성
+            // 검증 6: 최소 1개 조건 필수
+            if (!sWerks && !sMatnr && !sRunIdFrom && !oStartFrom && !oEndFrom
+                && !sStatus && !sStatusDetail) {
+                MessageBox.error(this._i18n("msgNoCondition"));
+                return;
+            }
+
+            // -------------------------------------------------------
+            // 비동기 유효성 검증 (OData 조회, Promise.all 병렬 처리)
+            // MPS ID / 플랜트 / 자재코드 DB 존재 여부 확인
+            // 모두 통과 시 실제 조회 실행
+            // -------------------------------------------------------
+            this._validateAsync(sRunIdFrom, sRunIdTo, sWerks, sMatnr)
+                .then(() => {
+                    // 비동기 검증 모두 통과 → 실제 조회 실행
+                    // [변경] sStatusDetail 파라미터 추가
+                    this._executeSearch(
+                        sWerks, sMatnr, sRunIdFrom, sRunIdTo, sStatus, sStatusDetail,
+                        oStartFrom, oStartTo, oEndFrom, oEndTo
+                    );
+                })
+                .catch((sMessage) => {
+                    // 비동기 검증 실패 → 에러 메시지 표시
+                    MessageBox.error(sMessage);
+                });
+        },
+
+        // -------------------------------------------------------
+        // 비동기 유효성 검증
+        // MPS ID / 플랜트 / 자재코드 DB 존재 여부 Promise.all 병렬 처리
+        // 모두 통과 시 resolve(), 하나라도 실패 시 reject(에러메시지)
+        // -------------------------------------------------------
+        _validateAsync(sRunIdFrom, sRunIdTo, sWerks, sMatnr) {
+            const oModel = this.getOwnerComponent().getModel();
+            const aPromises = [];
+
+            // MpsRunSet에 MpsRunId EQ로 직접 조회
+            // MpsRunSet의 mpsrunset_get_entityset은 WHEN 'MpsRunId' CASE 매칭 정상
+            // EQ 처리도 수정 1에서 lv_runid_to = lv_runid_from으로 단건 보장됨
+
+            // MPS 실행 ID From 존재 여부 체크
+            if (sRunIdFrom) {
+                aPromises.push(new Promise((resolve, reject) => {
+                    oModel.read("/MpsRunSet", {
+                        filters: [
+                            // MpsRunSet의 MpsRunId 필드로 단건 조회
+                            // mpsrunset_get_entityset에서 EQ → lv_runid_from=lv_runid_to로 처리
+                            new Filter("MpsRunId", FilterOperator.EQ, sRunIdFrom)
+                        ],
+                        groupId: "$direct",
+                        success: (oData) => {
+                            // 결과 없으면 존재하지 않는 MPS 실행 ID
+                            if (!oData.results || oData.results.length === 0) {
+                                reject(this._i18n("msgRunIdNotFound"));
+                            } else {
+                                resolve();
+                            }
+                        },
+                        // 조회 오류 시에도 존재하지 않는 ID로 처리
+                        error: () => reject(this._i18n("msgRunIdNotFound"))
+                    });
+                }));
+            }
+
+            // MPS 실행 ID To 존재 여부 체크
+            if (sRunIdTo) {
+                aPromises.push(new Promise((resolve, reject) => {
+                    oModel.read("/MpsRunSet", {
+                        filters: [
+                            // From과 동일하게 MpsRunId EQ로 단건 조회
+                            new Filter("MpsRunId", FilterOperator.EQ, sRunIdTo)
+                        ],
+                        groupId: "$direct",
+                        success: (oData) => {
+                            if (!oData.results || oData.results.length === 0) {
+                                reject(this._i18n("msgRunIdNotFound"));
+                            } else {
+                                resolve();
+                            }
+                        },
+                        error: () => reject(this._i18n("msgRunIdNotFound"))
+                    });
+                }));
+            }
+
+            // 플랜트 존재 여부 체크
+            if (sWerks) {
+                aPromises.push(new Promise((resolve, reject) => {
+                    oModel.read("/PlantSet", {
+                        filters: [
+                            new Filter("Werks", FilterOperator.EQ, sWerks)
+                        ],
+                        groupId: "$direct",
+                        success: (oData) => {
+                            if (!oData.results || oData.results.length === 0) {
+                                reject(this._i18n("msgWerksNotFound"));
+                            } else {
+                                resolve();
+                            }
+                        },
+                        error: () => reject(this._i18n("msgWerksNotFound"))
+                    });
+                }));
+            }
+
+            // 자재코드 존재 여부 체크
+            if (sMatnr) {
+                aPromises.push(new Promise((resolve, reject) => {
+                    oModel.read("/MaterialSet", {
+                        filters: [
+                            new Filter("Matnr", FilterOperator.EQ, sMatnr)
+                        ],
+                        groupId: "$direct",
+                        success: (oData) => {
+                            if (!oData.results || oData.results.length === 0) {
+                                reject(this._i18n("msgMatnrNotFound"));
+                            } else {
+                                resolve();
+                            }
+                        },
+                        error: () => reject(this._i18n("msgMatnrNotFound"))
+                    });
+                }));
+            }
+
+            // 검증 대상 없으면 즉시 통과
+            if (aPromises.length === 0) {
+                return Promise.resolve();
+            }
+
+            // 모든 검증 병렬 실행
+            // Promise.all: 하나라도 reject되면 즉시 catch로 이동
+            return Promise.all(aPromises);
+        },
+
+        // -------------------------------------------------------
+        // 실제 조회 실행
+        // 비동기 검증 통과 후 호출
+        // OData 필터 구성 → _loadMpsRunList() 호출
+        // -------------------------------------------------------
+        _executeSearch(sWerks, sMatnr, sRunIdFrom, sRunIdTo, sStatus, sStatusDetail,
+            oStartFrom, oStartTo, oEndFrom, oEndTo) {
+
             const aFilters = [];
 
+            // 플랜트 필터
             if (sWerks) {
                 aFilters.push(new Filter("Werks", FilterOperator.EQ, sWerks));
             }
+
+            // 자재코드 필터
             if (sMatnr) {
                 aFilters.push(new Filter("Matnr", FilterOperator.EQ, sMatnr));
             }
-            // MPS 실행 ID: From만 있으면 GE, From~To 둘 다 있으면 BT
+
+            // MPS 실행 ID 필터
+            // [변경] From만 입력 → EQ (단건 조회) / From+To 입력 → BT (범위 조회)
+            // 기존: From만 입력 시 GE(이상) → EQ(단건)으로 변경
             if (sRunIdFrom && sRunIdTo) {
+                // From + To 모두 입력 → 범위 조회
                 aFilters.push(new Filter("MpsRunId", FilterOperator.BT, sRunIdFrom, sRunIdTo));
             } else if (sRunIdFrom) {
-                aFilters.push(new Filter("MpsRunId", FilterOperator.GE, sRunIdFrom));
+                // From만 입력 → 단건 조회 (GE → EQ 변경)
+                aFilters.push(new Filter("MpsRunId", FilterOperator.EQ, sRunIdFrom));
             }
+            // To만 입력 케이스는 동기 검증(검증1)에서 이미 차단됨
+
+            // 실행상태 필터
             if (sStatus) {
                 aFilters.push(new Filter("Status", FilterOperator.EQ, sStatus));
             }
 
-            // OData DateTime 리터럴로 전달 (UTC 시차 보정 포함)
-            // KST(+9) → UTC 변환 시 9시간 빠르게 전달되므로 9시간 더해서 보정
+            // 상태상세 필터
+            if (sStatusDetail) {
+                aFilters.push(new Filter("StatusDetail", FilterOperator.EQ, sStatusDetail));
+            }
+
+            // 날짜 필터 — OData DateTime 리터럴로 전달 (UTC 시차 보정)
+            // KST(+9) → UTC 변환 시 9시간 빠르게 전달되므로 timezone offset으로 보정
             const fnDateOData = (oDate) => {
-                // 선택한 날짜의 자정(00:00:00 KST) = UTC+9이므로
-                // UTC 기준으로는 전날 15:00:00이 됨
-                // → 9시간(32400000ms)을 더해 날짜 보정
-                const iOffset = oDate.getTimezoneOffset() * 60 * 1000; // 음수 (KST: -540분 → +540분 보정)
+                const iOffset = oDate.getTimezoneOffset() * 60 * 1000;
                 return new Date(oDate.getTime() - iOffset);
             };
 
@@ -131,6 +312,11 @@ sap.ui.define([
                 aFilters.push(new Filter("PlanEndDate", FilterOperator.LE, fnDateOData(oEndTo)));
             }
 
+            // 마지막 조회에 사용한 필터를 저장
+            // onRefresh()에서 동일 조건으로 재조회 시 사용
+            this._aLastFilters = aFilters;
+
+            // 실제 조회 실행
             this._loadMpsRunList(aFilters);
         },
 
@@ -151,7 +337,7 @@ sap.ui.define([
                     const sStatusDetail = this.getView().getModel("viewModel")
                         .getProperty("/searchStatusDetail");
 
-                    if (sStatusDetail === "EC_ONLY") {
+                    if (sStatusDetail === "CF") {
                         // 확정포함: Status=EC + EarliestWaDate 없음
                         aItems = aItems.filter(item =>
                             item.Status === "EC" && !item.EarliestWaDate
@@ -237,6 +423,10 @@ sap.ui.define([
             this.getView().byId("vboxDashNoData").setVisible(true);
             this.getView().byId("vboxDashboard").setVisible(false);
 
+            // 초기화 시 마지막 조회 필터도 함께 초기화
+            // 초기화 후 새로고침 시 "조회 후 새로고침이 가능합니다." 안내 표시
+            this._aLastFilters = null;
+
             // 초기화 완료 메시지
             MessageToast.show("초기화 되었습니다.");
         },
@@ -282,9 +472,19 @@ sap.ui.define([
             }
         },
 
-        // 새로고침
+        // 마지막 조회 필터로 직접 재조회
+        // _aLastFilters: _executeSearch()에서 저장한 마지막 조회 필터
+        // 조회 전(진입 직후): _aLastFilters 없으므로 안내 메시지만 표시
+        // 조회 후: 마지막 조회 조건 그대로 재조회 (조회 조건 변경 무관)
         onRefresh() {
-            this.onSearch();
+            // 조회 이력 없으면 새로고침 불가 안내
+            if (!this._aLastFilters) {
+                MessageToast.show("조회 후 새로고침이 가능합니다.");
+                return;
+            }
+
+            // 마지막 조회 필터로 직접 재조회 (onSearch() 재검증 없이)
+            this._loadMpsRunList(this._aLastFilters);
             MessageToast.show("새로고침 되었습니다.");
         },
 
@@ -1151,13 +1351,13 @@ sap.ui.define([
                         }),
                         new sap.m.Table({
                             columns: [
-                                new sap.m.Column({ header: new sap.m.Text({ text: "MPS 실행 ID" }) }),
-                                new sap.m.Column({ header: new sap.m.Text({ text: "플랜트" }) }),
-                                new sap.m.Column({ header: new sap.m.Text({ text: "플랜트명" }) }),
-                                new sap.m.Column({ header: new sap.m.Text({ text: "자재코드" }) }),
+                                new sap.m.Column({ width: "9rem", header: new sap.m.Text({ text: "MPS 실행 ID" }) }),
+                                new sap.m.Column({ width: "4rem", header: new sap.m.Text({ text: "플랜트" }) }),
+                                new sap.m.Column({ width: "6rem", header: new sap.m.Text({ text: "플랜트명" }) }),
+                                new sap.m.Column({ width: "8rem", header: new sap.m.Text({ text: "자재코드" }) }),
                                 new sap.m.Column({ header: new sap.m.Text({ text: "자재명" }) }),
-                                new sap.m.Column({ header: new sap.m.Text({ text: "계획 시작일" }) }),
-                                new sap.m.Column({ header: new sap.m.Text({ text: "계획 종료일" }) })
+                                new sap.m.Column({ width: "7rem", header: new sap.m.Text({ text: "계획 시작일" }) }),
+                                new sap.m.Column({ width: "7rem", header: new sap.m.Text({ text: "계획 종료일" }) })
                             ],
                             items: {
                                 path: "mpsRunIdModel>/items",

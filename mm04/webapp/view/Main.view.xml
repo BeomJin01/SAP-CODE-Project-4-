@@ -53,7 +53,7 @@
                                         id="inputRunIdFrom"
                                         placeholder="From"
                                         maxLength="12"
-                                        width="7rem"
+                                        width="9rem"
                                         value="{viewModel>/searchRunIdFrom}"
                                         class="sapUiSmallMarginBegin"
                                         submit=".onSearch"
@@ -71,7 +71,7 @@
                                         id="inputRunIdTo"
                                         placeholder="To"
                                         maxLength="12"
-                                        width="7rem"
+                                        width="9rem"
                                         value="{viewModel>/searchRunIdTo}"
                                         submit=".onSearch"
                                     />
@@ -138,6 +138,8 @@
                                         id="txtMaktx"
                                         text="{viewModel>/searchMaktx}"
                                         class="sapUiSmallMarginBegin"
+                                        wrapping="false"
+                                        width="100%"
                                     />
                                 </HBox>
                             </VBox>
@@ -176,7 +178,7 @@
                                             <!-- 확정포함: Status=EC + EarliestWaDate 없음 -->
                                             <core:Item
                                                 xmlns:core="sap.ui.core"
-                                                key="EC_ONLY"
+                                                key="CF"
                                                 text="{i18n>statusDetailEC}"
                                             />
                                             <!-- 승인대기: Status=EC + EarliestWaDate 있음 -->
@@ -264,7 +266,7 @@
                                         id="drsStartDate"
                                         displayFormat="yyyy.MM.dd"
                                         valueFormat="yyyy-MM-dd"
-                                        placeholder="YYYY.MM.DD ~ YYYY.MM.DD"
+                                        placeholder="YYYY.MM.DD - YYYY.MM.DD"
                                         width="18rem"
                                         class="sapUiSmallMarginBegin"
                                     />
@@ -284,7 +286,7 @@
                                         id="drsEndDate"
                                         displayFormat="yyyy.MM.dd"
                                         valueFormat="yyyy-MM-dd"
-                                        placeholder="YYYY.MM.DD ~ YYYY.MM.DD"
+                                        placeholder="YYYY.MM.DD - YYYY.MM.DD"
                                         width="18rem"
                                         class="sapUiSmallMarginBegin"
                                     />
